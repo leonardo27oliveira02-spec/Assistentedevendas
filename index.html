@@ -3,44 +3,656 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TESTE</title>
+    <title>C&M - Controle de Consultor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: Arial, sans-serif;
+        :root {
+            --cor-laranja: #F5A623;
+            --cor-verde: #C8D946;
+            --cor-turquesa: #4ECDC4;
+            --cor-escuro: #2C5F5D;
         }
-        .card {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            text-align: center;
-        }
-        h1 {
-            color: #667eea;
-            margin: 0 0 20px 0;
-        }
-        .status {
-            font-size: 48px;
-            margin: 20px 0;
+        .bg-cm-escuro { background-color: var(--cor-escuro); }
+        .bg-cm-laranja { background-color: var(--cor-laranja); }
+        .bg-cm-verde { background-color: var(--cor-verde); }
+        .bg-cm-turquesa { background-color: var(--cor-turquesa); }
+        .text-cm-escuro { color: var(--cor-escuro); }
+        .btn-cm { background: linear-gradient(135deg, var(--cor-laranja), var(--cor-verde), var(--cor-turquesa)); }
+        .btn-cm:hover { opacity: 0.9; }
+        .loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; }
+        .loading.active { display: block; }
+        .checkbox-tarefa {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: #4ECDC4;
         }
     </style>
 </head>
-<body>
-    <div class="card">
-        <h1>🧪 Teste do GitHub Pages</h1>
-        <div class="status">✅</div>
-        <p><strong>SUCESSO!</strong></p>
-        <p>Se você está vendo isso, o GitHub Pages está funcionando!</p>
-        <p style="margin-top: 30px; font-size: 12px; color: #666;">
-            Agora podemos colocar o app completo aqui.
-        </p>
+<body class="bg-gray-50">
+    <div id="loading" class="loading">
+        <div class="bg-white p-8 rounded-lg shadow-2xl flex flex-col items-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-cm-turquesa border-solid"></div>
+            <p class="mt-4 text-cm-escuro font-semibold">Carregando...</p>
+        </div>
     </div>
+
+    <div id="app"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://awppfluuudipkgrtrgyw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cHBmbHV1dWRpcGtncnRyZ3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4MTk5MDYsImV4cCI6MjA4NTM5NTkwNn0.L7EjW4ytXMbVlGxhsMb8Hh77cjRpPr5Y-KG0dR4e35A';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        class ControlConsultor {
+            constructor() {
+                this.currentUser = null;
+                this.currentPage = 'rotina';
+                this.filtroDataInicio = this.getDataMesAtual();
+                this.filtroDataFim = this.getDataAtual();
+                this.historicoDesempenho = [];
+                this.rotinaTrabalho = [];
+                this.comissaoPadrao = 5;
+                
+                this.verificarSessao();
+            }
+
+            async verificarSessao() {
+                this.showLoading();
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session) {
+                    this.currentUser = session.user;
+                    await this.carregarDados();
+                    this.render();
+                } else {
+                    this.renderLogin();
+                }
+                this.hideLoading();
+            }
+
+            showLoading() {
+                document.getElementById('loading').classList.add('active');
+            }
+
+            hideLoading() {
+                document.getElementById('loading').classList.remove('active');
+            }
+
+            getDataAtual() {
+                return new Date().toISOString().split('T')[0];
+            }
+
+            getDataMesAtual() {
+                const hoje = new Date();
+                return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+            }
+
+            async carregarDados() {
+                this.showLoading();
+                
+                const { data: rotina } = await supabase
+                    .from('rotina_trabalho')
+                    .select('*')
+                    .eq('user_id', this.currentUser.id)
+                    .order('ordem', { ascending: true });
+                
+                if (rotina && rotina.length > 0) {
+                    this.rotinaTrabalho = rotina.map(r => ({
+                        id: r.id,
+                        horario: r.horario,
+                        etiqueta: r.etiqueta,
+                        cor: r.cor,
+                        tarefas: r.tarefas.map((tarefa, idx) => ({
+                            texto: tarefa,
+                            completo: false,
+                            id: idx
+                        }))
+                    }));
+                } else {
+                    await this.criarRotinaPadrao();
+                }
+
+                const { data: historico } = await supabase
+                    .from('historico_desempenho')
+                    .select('*')
+                    .eq('user_id', this.currentUser.id)
+                    .order('data', { ascending: false });
+                this.historicoDesempenho = historico || [];
+
+                this.hideLoading();
+            }
+
+            async criarRotinaPadrao() {
+                const rotinaPadrao = [
+                    { ordem: 1, horario: '08:00 às 08:30', etiqueta: 'Novo Cliente', cor: 'bg-green-500', tarefas: ['Chamar TODOS novos clientes do LL', 'Verificar etiqueta novo cliente', 'Etiquetar conforme o fluxo de etiquetas'] },
+                    { ordem: 2, horario: '08:30 às 11:00', etiqueta: 'Atendimento', cor: 'bg-blue-500', tarefas: ['Interagir com TODOS os clientes', 'Etiquetar conforme o fluxo de etiquetas'] },
+                    { ordem: 3, horario: '11:00 às 12:00', etiqueta: 'Aguardando Pagamento', cor: 'bg-red-500', tarefas: ['Lembrar fechamento cobrar leve', 'Follow-up em atendimento'] },
+                    { ordem: 4, horario: '12:00 às 13:30', etiqueta: 'Almoço', cor: 'bg-green-600', tarefas: ['Intervalo para almoço'] },
+                    { ordem: 5, horario: '13:30 às 14:00', etiqueta: 'Não Responde', cor: 'bg-yellow-500', tarefas: ['Prospectar 25 clientes antigos'] },
+                    { ordem: 6, horario: '14:00 às 16:00', etiqueta: 'Atendimento', cor: 'bg-blue-500', tarefas: ['Interagir com TODOS os clientes', 'Finalizar TODOS orçamentos da etiqueta', 'Etiquetar conforme o fluxo de etiquetas'] },
+                    { ordem: 7, horario: '16:00 às 16:30', etiqueta: 'Analisando', cor: 'bg-yellow-500', tarefas: ['Prospectar 25 clientes antigos'] },
+                    { ordem: 8, horario: '16:30 às 18:00', etiqueta: 'Aguardando Pagamento', cor: 'bg-red-500', tarefas: ['Buscar fechamento com TODOS da etiqueta', 'Conferir se contatos do dia tem etiqueta', 'Lançar vendas do dia no LL'] }
+                ];
+
+                for (const item of rotinaPadrao) {
+                    await supabase.from('rotina_trabalho').insert({
+                        user_id: this.currentUser.id,
+                        ordem: item.ordem,
+                        horario: item.horario,
+                        etiqueta: item.etiqueta,
+                        cor: item.cor,
+                        tarefas: item.tarefas
+                    });
+                }
+
+                await this.carregarDados();
+            }
+
+            async registrarUsuario(nome, email, senha) {
+                this.showLoading();
+                
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: senha,
+                    options: {
+                        data: { nome: nome }
+                    }
+                });
+
+                this.hideLoading();
+
+                if (error) {
+                    alert('Erro ao criar conta: ' + error.message);
+                    return;
+                }
+
+                alert('✅ Conta criada! Verifique seu email para confirmar.');
+                this.renderLogin();
+            }
+
+            async fazerLogin(email, senha) {
+                this.showLoading();
+                
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: senha
+                });
+
+                this.hideLoading();
+
+                if (error) {
+                    alert('Erro ao fazer login: ' + error.message);
+                    return;
+                }
+
+                this.currentUser = data.user;
+                await this.carregarDados();
+                this.render();
+            }
+
+            async logout() {
+                await supabase.auth.signOut();
+                this.currentUser = null;
+                this.renderLogin();
+            }
+
+            toggleTarefa(blocoId, tarefaId) {
+                const bloco = this.rotinaTrabalho.find(r => r.id === blocoId);
+                if (bloco) {
+                    const tarefa = bloco.tarefas.find(t => t.id === tarefaId);
+                    if (tarefa) {
+                        tarefa.completo = !tarefa.completo;
+                        this.render();
+                    }
+                }
+            }
+
+            calcularEstatisticas() {
+                let totalTarefas = 0;
+                let tarefasCompletas = 0;
+
+                this.rotinaTrabalho.forEach(bloco => {
+                    bloco.tarefas.forEach(tarefa => {
+                        totalTarefas++;
+                        if (tarefa.completo) tarefasCompletas++;
+                    });
+                });
+
+                return {
+                    total: totalTarefas,
+                    completas: tarefasCompletas,
+                    percentual: totalTarefas > 0 ? Math.round((tarefasCompletas / totalTarefas) * 100) : 0
+                };
+            }
+
+            calcularPercentualBloco(bloco) {
+                const total = bloco.tarefas.length;
+                const completas = bloco.tarefas.filter(t => t.completo).length;
+                return total > 0 ? Math.round((completas / total) * 100) : 0;
+            }
+
+            async salvarDiaNoHistorico() {
+                const hoje = this.getDataAtual();
+                const stats = this.calcularEstatisticas();
+
+                // Preparar detalhes com informações de cada tarefa
+                const detalhes = this.rotinaTrabalho.map(bloco => ({
+                    etiqueta: bloco.etiqueta,
+                    horario: bloco.horario,
+                    tarefas: bloco.tarefas.map(t => ({
+                        texto: t.texto,
+                        completo: t.completo
+                    })),
+                    percentual: this.calcularPercentualBloco(bloco)
+                }));
+
+                this.showLoading();
+
+                await supabase
+                    .from('historico_desempenho')
+                    .delete()
+                    .eq('user_id', this.currentUser.id)
+                    .eq('data', hoje);
+
+                const { error } = await supabase
+                    .from('historico_desempenho')
+                    .insert({
+                        user_id: this.currentUser.id,
+                        data: hoje,
+                        tarefas_completas: stats.completas,
+                        total_tarefas: stats.total,
+                        percentual: stats.percentual,
+                        detalhes: detalhes
+                    });
+
+                await this.carregarDados();
+                this.hideLoading();
+
+                if (!error) {
+                    alert(`✅ Dia registrado!\n\n📊 Você completou ${stats.completas} de ${stats.total} tarefas (${stats.percentual}%)`);
+                }
+            }
+
+            resetarRotina() {
+                if (confirm('Deseja resetar todas as tarefas da rotina?')) {
+                    this.rotinaTrabalho.forEach(bloco => {
+                        bloco.tarefas.forEach(tarefa => {
+                            tarefa.completo = false;
+                        });
+                    });
+                    alert('Rotina resetada com sucesso!');
+                    this.render();
+                }
+            }
+
+            getHistoricoMesAtual() {
+                const hoje = new Date();
+                const mesAtual = hoje.getMonth();
+                const anoAtual = hoje.getFullYear();
+                
+                return this.historicoDesempenho.filter(h => {
+                    const dataHist = new Date(h.data);
+                    return dataHist.getMonth() === mesAtual && dataHist.getFullYear() === anoAtual;
+                });
+            }
+
+            analisarDesempenho() {
+                const historicoMes = this.getHistoricoMesAtual();
+                
+                if (historicoMes.length === 0) {
+                    return {
+                        mediaGeral: 0,
+                        tarefasMaisFalhas: [],
+                        blocosMaisFalhas: []
+                    };
+                }
+
+                // Calcular média geral
+                const mediaGeral = historicoMes.reduce((sum, h) => sum + h.percentual, 0) / historicoMes.length;
+
+                // Analisar tarefas com mais falhas
+                const contagemTarefas = {};
+                historicoMes.forEach(dia => {
+                    dia.detalhes.forEach(bloco => {
+                        bloco.tarefas.forEach(tarefa => {
+                            const chave = `${bloco.etiqueta}: ${tarefa.texto}`;
+                            if (!contagemTarefas[chave]) {
+                                contagemTarefas[chave] = { total: 0, falhas: 0 };
+                            }
+                            contagemTarefas[chave].total++;
+                            if (!tarefa.completo) {
+                                contagemTarefas[chave].falhas++;
+                            }
+                        });
+                    });
+                });
+
+                const tarefasMaisFalhas = Object.entries(contagemTarefas)
+                    .map(([tarefa, dados]) => ({
+                        tarefa,
+                        percentualFalha: Math.round((dados.falhas / dados.total) * 100)
+                    }))
+                    .filter(t => t.percentualFalha > 30)
+                    .sort((a, b) => b.percentualFalha - a.percentualFalha)
+                    .slice(0, 5);
+
+                // Analisar blocos com mais falhas
+                const contagemBlocos = {};
+                historicoMes.forEach(dia => {
+                    dia.detalhes.forEach(bloco => {
+                        if (!contagemBlocos[bloco.etiqueta]) {
+                            contagemBlocos[bloco.etiqueta] = { total: 0, soma: 0 };
+                        }
+                        contagemBlocos[bloco.etiqueta].total++;
+                        contagemBlocos[bloco.etiqueta].soma += bloco.percentual;
+                    });
+                });
+
+                const blocosMaisFalhas = Object.entries(contagemBlocos)
+                    .map(([bloco, dados]) => ({
+                        bloco,
+                        mediaPercentual: Math.round(dados.soma / dados.total)
+                    }))
+                    .sort((a, b) => a.mediaPercentual - b.mediaPercentual)
+                    .slice(0, 3);
+
+                return { mediaGeral, tarefasMaisFalhas, blocosMaisFalhas };
+            }
+
+            renderLogin() {
+                const app = document.getElementById('app');
+                app.innerHTML = `
+                    <div class="min-h-screen bg-cm-escuro flex items-center justify-center p-4">
+                        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+                            <div class="flex justify-center mb-8">
+                                <div class="flex gap-2">
+                                    <div class="w-16 h-20 bg-cm-laranja rounded flex items-center justify-center">
+                                        <span class="text-cm-escuro text-4xl font-bold">C</span>
+                                    </div>
+                                    <div class="w-16 h-20 bg-cm-verde rounded flex items-center justify-center">
+                                        <span class="text-cm-escuro text-4xl font-bold">&</span>
+                                    </div>
+                                    <div class="w-16 h-20 bg-cm-turquesa rounded flex items-center justify-center">
+                                        <span class="text-cm-escuro text-4xl font-bold">M</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Controle de Consultor</h1>
+                            <p class="text-gray-600 text-center mb-6 text-sm">Análise Detalhada por Tarefa</p>
+                            
+                            <div class="flex gap-2 mb-6">
+                                <button id="btnLogin" onclick="app.mostrarAba('login')" class="flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white">Login</button>
+                                <button id="btnRegistro" onclick="app.mostrarAba('registro')" class="flex-1 px-4 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700">Criar Conta</button>
+                            </div>
+
+                            <div id="formLogin">
+                                <input type="email" id="loginEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                                <input type="password" id="loginSenha" placeholder="Senha" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                                <button onclick="app.fazerLogin(document.getElementById('loginEmail').value, document.getElementById('loginSenha').value)" class="w-full btn-cm text-white py-3 rounded-lg font-semibold transition">Entrar</button>
+                            </div>
+
+                            <div id="formRegistro" style="display: none;">
+                                <input type="text" id="registroNome" placeholder="Nome Completo" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                                <input type="email" id="registroEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                                <input type="password" id="registroSenha" placeholder="Senha (mínimo 6 caracteres)" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                                <button onclick="app.registrarUsuario(document.getElementById('registroNome').value, document.getElementById('registroEmail').value, document.getElementById('registroSenha').value)" class="w-full btn-cm text-white py-3 rounded-lg font-semibold transition">Criar Conta</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            mostrarAba(aba) {
+                const btnLogin = document.getElementById('btnLogin');
+                const btnRegistro = document.getElementById('btnRegistro');
+                const formLogin = document.getElementById('formLogin');
+                const formRegistro = document.getElementById('formRegistro');
+
+                if (aba === 'login') {
+                    btnLogin.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white';
+                    btnRegistro.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700';
+                    formLogin.style.display = 'block';
+                    formRegistro.style.display = 'none';
+                } else {
+                    btnLogin.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700';
+                    btnRegistro.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white';
+                    formLogin.style.display = 'none';
+                    formRegistro.style.display = 'block';
+                }
+            }
+
+            render() {
+                if (!this.currentUser) {
+                    this.renderLogin();
+                    return;
+                }
+
+                const app = document.getElementById('app');
+                const nomeUsuario = this.currentUser.user_metadata?.nome || this.currentUser.email.split('@')[0];
+                const stats = this.calcularEstatisticas();
+
+                if (this.currentPage === 'rotina') {
+                    app.innerHTML = `
+                        <div class="min-h-screen bg-gray-50">
+                            <div class="bg-cm-escuro text-white shadow-lg">
+                                <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex gap-1">
+                                            <div class="w-8 h-10 bg-cm-laranja rounded flex items-center justify-center">
+                                                <span class="text-cm-escuro text-xl font-bold">C</span>
+                                            </div>
+                                            <div class="w-8 h-10 bg-cm-verde rounded flex items-center justify-center">
+                                                <span class="text-cm-escuro text-xl font-bold">&</span>
+                                            </div>
+                                            <div class="w-8 h-10 bg-cm-turquesa rounded flex items-center justify-center">
+                                                <span class="text-cm-escuro text-xl font-bold">M</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h1 class="text-xl font-bold">Controle de Consultor</h1>
+                                            <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                </div>
+                            </div>
+
+                            <div class="bg-white shadow border-b">
+                                <div class="max-w-6xl mx-auto flex gap-4 px-4 py-3 overflow-x-auto">
+                                    <button onclick="app.currentPage = 'rotina'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-cm-turquesa text-white">✅ Rotina</button>
+                                    <button onclick="app.currentPage = 'analise'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">📊 Análise</button>
+                                    <button onclick="app.currentPage = 'config'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">🔧 Config</button>
+                                </div>
+                            </div>
+
+                            <div class="max-w-6xl mx-auto px-4 py-8">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h2 class="text-2xl font-bold text-cm-escuro">✅ Rotina de Trabalho</h2>
+                                    <div class="flex gap-2">
+                                        <button onclick="app.salvarDiaNoHistorico()" class="bg-cm-laranja hover:opacity-90 text-white px-4 py-2 rounded-lg font-semibold">💾 Salvar Dia</button>
+                                        <button onclick="app.resetarRotina()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold">🔄 Resetar</button>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h3 class="text-lg font-bold text-cm-escuro">Progresso do Dia</h3>
+                                        <span class="text-2xl font-bold text-cm-turquesa">${stats.percentual}%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-4">
+                                        <div class="bg-cm-verde h-4 rounded-full transition-all duration-500" style="width: ${stats.percentual}%"></div>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">${stats.completas} de ${stats.total} tarefas completadas</p>
+                                    <p class="text-xs text-orange-600 mt-3">💡 Marque cada tarefa individualmente para análise mais precisa!</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4">
+                                    ${this.rotinaTrabalho.map(bloco => {
+                                        const percBloco = this.calcularPercentualBloco(bloco);
+                                        return `
+                                        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                                            <div class="${bloco.cor} text-white p-4">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <div>
+                                                        <h3 class="text-xl font-bold">${bloco.horario}</h3>
+                                                        <p class="text-sm opacity-90">${bloco.etiqueta}</p>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <div class="text-2xl font-bold">${percBloco}%</div>
+                                                        <div class="text-xs opacity-90">${bloco.tarefas.filter(t => t.completo).length}/${bloco.tarefas.length}</div>
+                                                    </div>
+                                                </div>
+                                                <div class="w-full bg-white bg-opacity-30 rounded-full h-2">
+                                                    <div class="bg-white h-2 rounded-full transition-all duration-500" style="width: ${percBloco}%"></div>
+                                                </div>
+                                            </div>
+                                            <div class="p-4">
+                                                <h4 class="font-bold mb-3 text-gray-700">Tarefas:</h4>
+                                                <div class="space-y-3">
+                                                    ${bloco.tarefas.map(tarefa => `
+                                                        <label class="flex items-start gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                class="checkbox-tarefa mt-1"
+                                                                ${tarefa.completo ? 'checked' : ''}
+                                                                onchange="app.toggleTarefa(${bloco.id}, ${tarefa.id})"
+                                                            />
+                                                            <span class="${tarefa.completo ? 'line-through text-gray-400' : 'text-gray-700'}">${tarefa.texto}</span>
+                                                        </label>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `}).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (this.currentPage === 'analise') {
+                    const analise = this.analisarDesempenho();
+                    const historicoMes = this.getHistoricoMesAtual();
+
+                    app.innerHTML = `
+                        <div class="min-h-screen bg-gray-50">
+                            <div class="bg-cm-escuro text-white shadow-lg">
+                                <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                    <h1 class="text-xl font-bold">Análise de Desempenho - ${nomeUsuario}</h1>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                </div>
+                            </div>
+
+                            <div class="bg-white shadow border-b">
+                                <div class="max-w-6xl mx-auto flex gap-4 px-4 py-3 overflow-x-auto">
+                                    <button onclick="app.currentPage = 'rotina'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">✅ Rotina</button>
+                                    <button onclick="app.currentPage = 'analise'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-cm-turquesa text-white">📊 Análise</button>
+                                    <button onclick="app.currentPage = 'config'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">🔧 Config</button>
+                                </div>
+                            </div>
+
+                            <div class="max-w-6xl mx-auto px-4 py-8">
+                                <h2 class="text-2xl font-bold mb-6 text-cm-escuro">📊 Análise Detalhada</h2>
+
+                                ${historicoMes.length === 0 ? `
+                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
+                                        <h3 class="text-lg font-bold text-yellow-800 mb-2">⚠️ Sem Dados</h3>
+                                        <p class="text-gray-700">Você ainda não salvou nenhum dia. Vá para a aba Rotina, marque suas tarefas e clique em "Salvar Dia"!</p>
+                                    </div>
+                                ` : `
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                                        <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-turquesa">
+                                            <p class="text-gray-600 text-sm">Média Geral</p>
+                                            <p class="text-4xl font-bold text-cm-escuro">${analise.mediaGeral.toFixed(0)}%</p>
+                                            <p class="text-xs text-gray-500 mt-2">${historicoMes.length} dias registrados</p>
+                                        </div>
+                                        <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-laranja">
+                                            <p class="text-gray-600 text-sm">Total de Tarefas</p>
+                                            <p class="text-4xl font-bold text-cm-escuro">${stats.total}</p>
+                                            <p class="text-xs text-gray-500 mt-2">tarefas diárias</p>
+                                        </div>
+                                        <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-verde">
+                                            <p class="text-gray-600 text-sm">Hoje</p>
+                                            <p class="text-4xl font-bold text-cm-escuro">${stats.percentual}%</p>
+                                            <p class="text-xs text-gray-500 mt-2">${stats.completas}/${stats.total} completas</p>
+                                        </div>
+                                    </div>
+
+                                    ${analise.tarefasMaisFalhas.length > 0 ? `
+                                        <div class="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg shadow mb-6">
+                                            <h3 class="text-xl font-bold text-red-800 mb-4">🚨 Tarefas com Mais Falhas</h3>
+                                            <div class="space-y-3">
+                                                ${analise.tarefasMaisFalhas.map(t => `
+                                                    <div class="bg-white p-4 rounded">
+                                                        <div class="flex justify-between items-center mb-2">
+                                                            <span class="text-gray-700 font-semibold">${t.tarefa}</span>
+                                                            <span class="text-red-600 font-bold">${t.percentualFalha}% de falha</span>
+                                                        </div>
+                                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                                            <div class="bg-red-500 h-2 rounded-full" style="width: ${t.percentualFalha}%"></div>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+
+                                    ${analise.blocosMaisFalhas.length > 0 ? `
+                                        <div class="bg-white p-6 rounded-lg shadow">
+                                            <h3 class="text-xl font-bold text-cm-escuro mb-4">📉 Blocos que Precisam de Atenção</h3>
+                                            <div class="space-y-3">
+                                                ${analise.blocosMaisFalhas.map(b => `
+                                                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded">
+                                                        <span class="font-semibold text-gray-700">${b.bloco}</span>
+                                                        <div class="flex items-center gap-3">
+                                                            <div class="w-32 bg-gray-200 rounded-full h-3">
+                                                                <div class="bg-cm-turquesa h-3 rounded-full" style="width: ${b.mediaPercentual}%"></div>
+                                                            </div>
+                                                            <span class="font-bold text-cm-escuro w-12 text-right">${b.mediaPercentual}%</span>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                `}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    app.innerHTML = `
+                        <div class="min-h-screen bg-gray-50">
+                            <div class="bg-cm-escuro text-white shadow-lg">
+                                <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                    <h1 class="text-xl font-bold">Configurações - ${nomeUsuario}</h1>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                </div>
+                            </div>
+                            <div class="bg-white shadow border-b">
+                                <div class="max-w-6xl mx-auto flex gap-4 px-4 py-3 overflow-x-auto">
+                                    <button onclick="app.currentPage = 'rotina'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">✅ Rotina</button>
+                                    <button onclick="app.currentPage = 'analise'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">📊 Análise</button>
+                                    <button onclick="app.currentPage = 'config'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-cm-turquesa text-white">🔧 Config</button>
+                                </div>
+                            </div>
+                            <div class="max-w-6xl mx-auto px-4 py-8">
+                                <div class="bg-white p-6 rounded-lg shadow max-w-md">
+                                    <h2 class="text-2xl font-bold mb-4 text-cm-escuro">Informações da Conta</h2>
+                                    <p class="text-gray-600 mb-2"><strong>Email:</strong> ${this.currentUser.email}</p>
+                                    <p class="text-gray-600 mb-6"><strong>Nome:</strong> ${nomeUsuario}</p>
+                                    <p class="text-gray-600 mb-4">Dias salvos: <strong>${this.historicoDesempenho.length}</strong></p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        const app = new ControlConsultor();
+    </script>
 </body>
 </html>
