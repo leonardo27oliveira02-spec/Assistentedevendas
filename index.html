@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C&M - Controle de Consultor (Supabase)</title>
+    <title>C&M - Controle de Consultor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -21,19 +20,19 @@
         .bg-cm-verde { background-color: var(--cor-verde); }
         .bg-cm-turquesa { background-color: var(--cor-turquesa); }
         .text-cm-escuro { color: var(--cor-escuro); }
-        .text-cm-laranja { color: var(--cor-laranja); }
-        .text-cm-verde { color: var(--cor-verde); }
-        .text-cm-turquesa { color: var(--cor-turquesa); }
         .btn-cm { background: linear-gradient(135deg, var(--cor-laranja), var(--cor-verde), var(--cor-turquesa)); }
         .btn-cm:hover { opacity: 0.9; }
-        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal.active { display: flex; align-items: center; justify-content: center; }
         .loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; }
         .loading.active { display: block; }
+        .checkbox-tarefa {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: #4ECDC4;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
-    <!-- Loading Spinner -->
     <div id="loading" class="loading">
         <div class="bg-white p-8 rounded-lg shadow-2xl flex flex-col items-center">
             <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-cm-turquesa border-solid"></div>
@@ -44,31 +43,20 @@
     <div id="app"></div>
 
     <script>
-        // ========================================
-        // 🔥 CONFIGURAÇÃO DO SUPABASE
-        // ========================================
-        // PASSO 1: Vá no Supabase → Settings → API
-        // PASSO 2: Copie a "Project URL" e cole abaixo entre as aspas
-        // PASSO 3: Copie a "anon/public key" e cole abaixo entre as aspas
+        const SUPABASE_URL = 'https://awppfluuudipkgrtrgyw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cHBmbHV1dWRpcGtncnRyZ3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4MTk5MDYsImV4cCI6MjA4NTM5NTkwNn0.L7EjW4ytXMbVlGxhsMb8Hh77cjRpPr5Y-KG0dR4e35A';
         
-      const SUPABASE_URL = 'https://awppfluuudipkgrtrgyw.supabase.co';  // ← COM ASPAS!
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cHBmbHV1dWRpcGtncnRyZ3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4MTk5MDYsImV4cCI6MjA4NTM5NTkwNn0.L7EjW4ytXMbVlGxhsMb8Hh77cjRpPr5Y-KG0dR4e35A';  // ← COM ASPAS!
-        // ========================================
-        // Inicializar Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         class ControlConsultor {
             constructor() {
                 this.currentUser = null;
-                this.currentPage = 'desempenho';
-                this.vendas = [];
-                this.comissaoPadrao = 5;
+                this.currentPage = 'rotina';
                 this.filtroDataInicio = this.getDataMesAtual();
                 this.filtroDataFim = this.getDataAtual();
-                this.editingId = null;
                 this.historicoDesempenho = [];
                 this.rotinaTrabalho = [];
-                this.editingRotinaId = null;
+                this.comissaoPadrao = 5;
                 
                 this.verificarSessao();
             }
@@ -101,22 +89,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
             getDataMesAtual() {
                 const hoje = new Date();
-                const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-                return primeiroDia.toISOString().split('T')[0];
+                return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
             }
 
             async carregarDados() {
                 this.showLoading();
                 
-                // Carregar vendas
-                const { data: vendas } = await supabase
-                    .from('vendas')
-                    .select('*')
-                    .eq('user_id', this.currentUser.id)
-                    .order('created_at', { ascending: false });
-                this.vendas = vendas || [];
-
-                // Carregar rotina
                 const { data: rotina } = await supabase
                     .from('rotina_trabalho')
                     .select('*')
@@ -129,32 +107,22 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
                         horario: r.horario,
                         etiqueta: r.etiqueta,
                         cor: r.cor,
-                        tarefas: r.tarefas,
-                        completo: false
+                        tarefas: r.tarefas.map((tarefa, idx) => ({
+                            texto: tarefa,
+                            completo: false,
+                            id: idx
+                        }))
                     }));
                 } else {
-                    // Criar rotina padrão se não existir
                     await this.criarRotinaPadrao();
                 }
 
-                // Carregar histórico
                 const { data: historico } = await supabase
                     .from('historico_desempenho')
                     .select('*')
                     .eq('user_id', this.currentUser.id)
                     .order('data', { ascending: false });
                 this.historicoDesempenho = historico || [];
-
-                // Carregar configurações
-                const { data: config } = await supabase
-                    .from('configuracoes')
-                    .select('*')
-                    .eq('user_id', this.currentUser.id)
-                    .single();
-                
-                if (config) {
-                    this.comissaoPadrao = parseFloat(config.comissao_padrao);
-                }
 
                 this.hideLoading();
             }
@@ -192,9 +160,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
                     email: email,
                     password: senha,
                     options: {
-                        data: {
-                            nome: nome
-                        }
+                        data: { nome: nome }
                     }
                 });
 
@@ -205,7 +171,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
                     return;
                 }
 
-                alert('✅ Conta criada com sucesso! Verifique seu email para confirmar.');
+                alert('✅ Conta criada! Verifique seu email para confirmar.');
                 this.renderLogin();
             }
 
@@ -235,142 +201,91 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
                 this.renderLogin();
             }
 
-            toggleTarefaCompleta(id) {
-                const item = this.rotinaTrabalho.find(r => r.id === id);
-                if (item) {
-                    item.completo = !item.completo;
-                    this.render();
+            toggleTarefa(blocoId, tarefaId) {
+                const bloco = this.rotinaTrabalho.find(r => r.id === blocoId);
+                if (bloco) {
+                    const tarefa = bloco.tarefas.find(t => t.id === tarefaId);
+                    if (tarefa) {
+                        tarefa.completo = !tarefa.completo;
+                        this.render();
+                    }
                 }
+            }
+
+            calcularEstatisticas() {
+                let totalTarefas = 0;
+                let tarefasCompletas = 0;
+
+                this.rotinaTrabalho.forEach(bloco => {
+                    bloco.tarefas.forEach(tarefa => {
+                        totalTarefas++;
+                        if (tarefa.completo) tarefasCompletas++;
+                    });
+                });
+
+                return {
+                    total: totalTarefas,
+                    completas: tarefasCompletas,
+                    percentual: totalTarefas > 0 ? Math.round((tarefasCompletas / totalTarefas) * 100) : 0
+                };
+            }
+
+            calcularPercentualBloco(bloco) {
+                const total = bloco.tarefas.length;
+                const completas = bloco.tarefas.filter(t => t.completo).length;
+                return total > 0 ? Math.round((completas / total) * 100) : 0;
             }
 
             async salvarDiaNoHistorico() {
                 const hoje = this.getDataAtual();
-                const tarefasCompletas = this.rotinaTrabalho.filter(t => t.completo).length;
-                const totalTarefas = this.rotinaTrabalho.length;
-                const percentual = Math.round((tarefasCompletas / totalTarefas) * 100);
+                const stats = this.calcularEstatisticas();
+
+                // Preparar detalhes com informações de cada tarefa
+                const detalhes = this.rotinaTrabalho.map(bloco => ({
+                    etiqueta: bloco.etiqueta,
+                    horario: bloco.horario,
+                    tarefas: bloco.tarefas.map(t => ({
+                        texto: t.texto,
+                        completo: t.completo
+                    })),
+                    percentual: this.calcularPercentualBloco(bloco)
+                }));
 
                 this.showLoading();
 
-                // Deletar registro do mesmo dia se existir
                 await supabase
                     .from('historico_desempenho')
                     .delete()
                     .eq('user_id', this.currentUser.id)
                     .eq('data', hoje);
 
-                // Inserir novo registro
                 const { error } = await supabase
                     .from('historico_desempenho')
                     .insert({
                         user_id: this.currentUser.id,
                         data: hoje,
-                        tarefas_completas: tarefasCompletas,
-                        total_tarefas: totalTarefas,
-                        percentual: percentual,
-                        detalhes: this.rotinaTrabalho.map(r => ({
-                            etiqueta: r.etiqueta,
-                            completo: r.completo
-                        }))
+                        tarefas_completas: stats.completas,
+                        total_tarefas: stats.total,
+                        percentual: stats.percentual,
+                        detalhes: detalhes
                     });
 
                 await this.carregarDados();
                 this.hideLoading();
 
                 if (!error) {
-                    alert(`✅ Dia registrado! Você completou ${percentual}% das tarefas hoje.`);
+                    alert(`✅ Dia registrado!\n\n📊 Você completou ${stats.completas} de ${stats.total} tarefas (${stats.percentual}%)`);
                 }
             }
 
             resetarRotina() {
                 if (confirm('Deseja resetar todas as tarefas da rotina?')) {
-                    this.rotinaTrabalho.forEach(item => item.completo = false);
-                    alert('Rotina resetada com sucesso!');
-                    this.render();
-                }
-            }
-
-            abrirModalEditarRotina(id) {
-                this.editingRotinaId = id;
-                this.render();
-                setTimeout(() => {
-                    document.getElementById('modalEditarRotina').classList.add('active');
-                }, 100);
-            }
-
-            fecharModalEditarRotina() {
-                this.editingRotinaId = null;
-                document.getElementById('modalEditarRotina')?.classList.remove('active');
-            }
-
-            async salvarEdicaoRotina() {
-                const item = this.rotinaTrabalho.find(r => r.id === this.editingRotinaId);
-                if (!item) return;
-
-                const horario = document.getElementById('editHorario')?.value || '';
-                const etiqueta = document.getElementById('editEtiqueta')?.value || '';
-                const cor = document.getElementById('editCor')?.value || 'bg-blue-500';
-                const tarefasText = document.getElementById('editTarefas')?.value || '';
-                const tarefas = tarefasText.split('\n').filter(t => t.trim());
-
-                if (!horario || !etiqueta || tarefas.length === 0) {
-                    alert('Preencha todos os campos!');
-                    return;
-                }
-
-                this.showLoading();
-
-                await supabase
-                    .from('rotina_trabalho')
-                    .update({
-                        horario: horario,
-                        etiqueta: etiqueta,
-                        cor: cor,
-                        tarefas: tarefas
-                    })
-                    .eq('id', this.editingRotinaId);
-
-                await this.carregarDados();
-                this.fecharModalEditarRotina();
-                this.hideLoading();
-                alert('Bloco de rotina atualizado!');
-                this.render();
-            }
-
-            async adicionarBlocoRotina() {
-                const novaOrdem = Math.max(...this.rotinaTrabalho.map(r => {
-                    // Buscar ordem do banco
-                    return 0; // Simplificado
-                })) + 1;
-
-                this.showLoading();
-
-                await supabase
-                    .from('rotina_trabalho')
-                    .insert({
-                        user_id: this.currentUser.id,
-                        ordem: this.rotinaTrabalho.length + 1,
-                        horario: '18:00 às 19:00',
-                        etiqueta: 'Nova Tarefa',
-                        cor: 'bg-gray-500',
-                        tarefas: ['Adicione suas tarefas aqui']
+                    this.rotinaTrabalho.forEach(bloco => {
+                        bloco.tarefas.forEach(tarefa => {
+                            tarefa.completo = false;
+                        });
                     });
-
-                await this.carregarDados();
-                this.hideLoading();
-                this.render();
-            }
-
-            async deletarBlocoRotina(id) {
-                if (confirm('Deletar este bloco de rotina?')) {
-                    this.showLoading();
-                    
-                    await supabase
-                        .from('rotina_trabalho')
-                        .delete()
-                        .eq('id', id);
-
-                    await this.carregarDados();
-                    this.hideLoading();
+                    alert('Rotina resetada com sucesso!');
                     this.render();
                 }
             }
@@ -386,237 +301,67 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
                 });
             }
 
-            getDicasPersonalizadas() {
+            analisarDesempenho() {
                 const historicoMes = this.getHistoricoMesAtual();
+                
                 if (historicoMes.length === 0) {
                     return {
-                        inicio: '🚀 Você está começando! Marque suas tarefas diariamente e clique em "Salvar Dia" para acompanhar seu progresso.',
-                        dicas: [
-                            'Comece marcando as tarefas mais importantes da manhã',
-                            'Use a rotina como guia para não esquecer nenhum cliente',
-                            'Ao final do dia, clique em "Salvar Dia" para registrar seu desempenho'
-                        ]
+                        mediaGeral: 0,
+                        tarefasMaisFalhas: [],
+                        blocosMaisFalhas: []
                     };
                 }
 
-                const mediaPercentual = historicoMes.reduce((sum, h) => sum + h.percentual, 0) / historicoMes.length;
-                const tarefasMaisIncompletas = this.analisarTarefasIncompletas(historicoMes);
-                
-                let mensagemPrincipal = '';
-                let dicas = [];
+                // Calcular média geral
+                const mediaGeral = historicoMes.reduce((sum, h) => sum + h.percentual, 0) / historicoMes.length;
 
-                if (mediaPercentual >= 90) {
-                    mensagemPrincipal = '🏆 EXCELENTE! Você está com desempenho excepcional! Continue assim!';
-                    dicas = [
-                        'Você é um exemplo de disciplina! Mantenha esse ritmo',
-                        'Considere compartilhar suas estratégias com a equipe',
-                        'Foque em otimizar o tempo de cada tarefa agora'
-                    ];
-                } else if (mediaPercentual >= 75) {
-                    mensagemPrincipal = '👍 MUITO BOM! Você está no caminho certo, mas pode melhorar ainda mais!';
-                    dicas = [
-                        `Atenção especial para: ${tarefasMaisIncompletas[0] || 'todas as tarefas'}`,
-                        'Tente completar pelo menos 90% das tarefas diárias',
-                        'Reserve os últimos 30min do dia para finalizar pendências'
-                    ];
-                } else if (mediaPercentual >= 60) {
-                    mensagemPrincipal = '⚠️ ATENÇÃO! Seu desempenho está abaixo do ideal. Vamos melhorar?';
-                    dicas = [
-                        `Principais dificuldades em: ${tarefasMaisIncompletas.slice(0, 2).join(', ')}`,
-                        'Defina alarmes para cada bloco de horário',
-                        'Comece pelas tarefas mais difíceis pela manhã',
-                        'Peça ajuda ao gestor se necessário'
-                    ];
-                } else {
-                    mensagemPrincipal = '🚨 URGENTE! Seu desempenho precisa melhorar imediatamente!';
-                    dicas = [
-                        'Converse com seu gestor sobre as dificuldades',
-                        'Revise sua rotina e ajuste os horários',
-                        'Foque em completar pelo menos 5 tarefas por dia',
-                        'Elimine distrações durante o expediente',
-                        'Considere fazer um checklist físico também'
-                    ];
-                }
-
-                return { inicio: mensagemPrincipal, dicas };
-            }
-
-            analisarTarefasIncompletas(historico) {
-                const contagem = {};
-                
-                historico.forEach(dia => {
-                    dia.detalhes.forEach(det => {
-                        if (!det.completo) {
-                            contagem[det.etiqueta] = (contagem[det.etiqueta] || 0) + 1;
-                        }
-                    });
-                });
-
-                return Object.entries(contagem)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([etiqueta, _]) => etiqueta);
-            }
-
-            getVendasFiltradas() {
-                return this.vendas.filter(v => {
-                    const dataVenda = new Date(v.data_confirmacao);
-                    const dataInicio = new Date(this.filtroDataInicio);
-                    const dataFim = new Date(this.filtroDataFim);
-                    dataFim.setHours(23, 59, 59, 999);
-                    return dataVenda >= dataInicio && dataVenda <= dataFim;
-                });
-            }
-
-            exportarExcel() {
-                const vendsFiltradas = this.getVendasFiltradas();
-                
-                const dados = vendsFiltradas.map(v => ({
-                    'Tipo Cliente': v.tipo_cliente,
-                    'Nome Cliente': v.nome_cliente,
-                    'Check-in': v.check_in,
-                    'Check-out': v.check_out,
-                    'Hotel': v.hotel,
-                    'Valor (R$)': v.valor,
-                    'Situação': v.situacao,
-                    'Agente': v.agente,
-                    'Voucher': v.voucher,
-                    'Data Confirmação': v.data_confirmacao,
-                    'Observações': v.observacoes || ''
-                }));
-
-                const totalVendido = vendsFiltradas.reduce((sum, v) => sum + parseFloat(v.valor || 0), 0);
-                const totalComissao = (totalVendido * this.comissaoPadrao) / 100;
-
-                dados.push({});
-                dados.push({ 'Tipo Cliente': 'RESUMO DO PERÍODO' });
-                dados.push({ 'Tipo Cliente': 'Total de Vendas', 'Nome Cliente': vendsFiltradas.length });
-                dados.push({ 'Tipo Cliente': 'Valor Total (R$)', 'Nome Cliente': totalVendido.toFixed(2) });
-                dados.push({ 'Tipo Cliente': `Comissão ${this.comissaoPadrao}% (R$)`, 'Nome Cliente': totalComissao.toFixed(2) });
-
-                const ws = XLSX.utils.json_to_sheet(dados);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'Vendas');
-                
-                XLSX.writeFile(wb, `C&M_Relatorio_Vendas_${new Date().toISOString().split('T')[0]}.xlsx`);
-            }
-
-            renderGraficos() {
-                setTimeout(() => {
-                    this.renderGraficoDesempenho();
-                    this.renderGraficoTarefas();
-                }, 100);
-            }
-
-            renderGraficoDesempenho() {
-                const ctx = document.getElementById('graficoDesempenho');
-                if (!ctx) return;
-
-                const historicoMes = this.getHistoricoMesAtual();
-                const labels = historicoMes.map(h => {
-                    const data = new Date(h.data);
-                    return `${data.getDate()}/${data.getMonth() + 1}`;
-                });
-                const dados = historicoMes.map(h => h.percentual);
-
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels,
-                        datasets: [{
-                            label: 'Desempenho Diário (%)',
-                            data: dados,
-                            borderColor: '#4ECDC4',
-                            backgroundColor: 'rgba(78, 205, 196, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                max: 100,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + '%';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            renderGraficoTarefas() {
-                const ctx = document.getElementById('graficoTarefas');
-                if (!ctx) return;
-
-                const historicoMes = this.getHistoricoMesAtual();
-                const tarefas = {};
-
+                // Analisar tarefas com mais falhas
+                const contagemTarefas = {};
                 historicoMes.forEach(dia => {
-                    dia.detalhes.forEach(det => {
-                        if (!tarefas[det.etiqueta]) {
-                            tarefas[det.etiqueta] = { completo: 0, total: 0 };
-                        }
-                        tarefas[det.etiqueta].total++;
-                        if (det.completo) tarefas[det.etiqueta].completo++;
+                    dia.detalhes.forEach(bloco => {
+                        bloco.tarefas.forEach(tarefa => {
+                            const chave = `${bloco.etiqueta}: ${tarefa.texto}`;
+                            if (!contagemTarefas[chave]) {
+                                contagemTarefas[chave] = { total: 0, falhas: 0 };
+                            }
+                            contagemTarefas[chave].total++;
+                            if (!tarefa.completo) {
+                                contagemTarefas[chave].falhas++;
+                            }
+                        });
                     });
                 });
 
-                const labels = Object.keys(tarefas);
-                const percentuais = labels.map(label => {
-                    const t = tarefas[label];
-                    return Math.round((t.completo / t.total) * 100);
+                const tarefasMaisFalhas = Object.entries(contagemTarefas)
+                    .map(([tarefa, dados]) => ({
+                        tarefa,
+                        percentualFalha: Math.round((dados.falhas / dados.total) * 100)
+                    }))
+                    .filter(t => t.percentualFalha > 30)
+                    .sort((a, b) => b.percentualFalha - a.percentualFalha)
+                    .slice(0, 5);
+
+                // Analisar blocos com mais falhas
+                const contagemBlocos = {};
+                historicoMes.forEach(dia => {
+                    dia.detalhes.forEach(bloco => {
+                        if (!contagemBlocos[bloco.etiqueta]) {
+                            contagemBlocos[bloco.etiqueta] = { total: 0, soma: 0 };
+                        }
+                        contagemBlocos[bloco.etiqueta].total++;
+                        contagemBlocos[bloco.etiqueta].soma += bloco.percentual;
+                    });
                 });
 
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels,
-                        datasets: [{
-                            label: 'Taxa de Conclusão (%)',
-                            data: percentuais,
-                            backgroundColor: [
-                                '#C8D946',
-                                '#4ECDC4',
-                                '#F5A623',
-                                '#2C5F5D',
-                                '#10B981',
-                                '#3B82F6',
-                                '#EF4444',
-                                '#8B5CF6'
-                            ]
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                max: 100,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + '%';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
+                const blocosMaisFalhas = Object.entries(contagemBlocos)
+                    .map(([bloco, dados]) => ({
+                        bloco,
+                        mediaPercentual: Math.round(dados.soma / dados.total)
+                    }))
+                    .sort((a, b) => a.mediaPercentual - b.mediaPercentual)
+                    .slice(0, 3);
+
+                return { mediaGeral, tarefasMaisFalhas, blocosMaisFalhas };
             }
 
             renderLogin() {
@@ -638,22 +383,19 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
                                 </div>
                             </div>
                             <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Controle de Consultor</h1>
-                            <p class="text-gray-600 text-center mb-6 text-sm">Parques & Resorts - Sistema Multi-usuário</p>
+                            <p class="text-gray-600 text-center mb-6 text-sm">Análise Detalhada por Tarefa</p>
                             
-                            <!-- Abas Login/Registro -->
                             <div class="flex gap-2 mb-6">
                                 <button id="btnLogin" onclick="app.mostrarAba('login')" class="flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white">Login</button>
                                 <button id="btnRegistro" onclick="app.mostrarAba('registro')" class="flex-1 px-4 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700">Criar Conta</button>
                             </div>
 
-                            <!-- Formulário de Login -->
                             <div id="formLogin">
                                 <input type="email" id="loginEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <input type="password" id="loginSenha" placeholder="Senha" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <button onclick="app.fazerLogin(document.getElementById('loginEmail').value, document.getElementById('loginSenha').value)" class="w-full btn-cm text-white py-3 rounded-lg font-semibold transition">Entrar</button>
                             </div>
 
-                            <!-- Formulário de Registro -->
                             <div id="formRegistro" style="display: none;">
                                 <input type="text" id="registroNome" placeholder="Nome Completo" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <input type="email" id="registroEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
@@ -691,324 +433,222 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
                 }
 
                 const app = document.getElementById('app');
-                let conteudo = '';
-
-                // Determinar o nome do usuário
                 const nomeUsuario = this.currentUser.user_metadata?.nome || this.currentUser.email.split('@')[0];
+                const stats = this.calcularEstatisticas();
 
-                if (this.currentPage === 'desempenho') {
+                if (this.currentPage === 'rotina') {
+                    app.innerHTML = `
+                        <div class="min-h-screen bg-gray-50">
+                            <div class="bg-cm-escuro text-white shadow-lg">
+                                <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex gap-1">
+                                            <div class="w-8 h-10 bg-cm-laranja rounded flex items-center justify-center">
+                                                <span class="text-cm-escuro text-xl font-bold">C</span>
+                                            </div>
+                                            <div class="w-8 h-10 bg-cm-verde rounded flex items-center justify-center">
+                                                <span class="text-cm-escuro text-xl font-bold">&</span>
+                                            </div>
+                                            <div class="w-8 h-10 bg-cm-turquesa rounded flex items-center justify-center">
+                                                <span class="text-cm-escuro text-xl font-bold">M</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h1 class="text-xl font-bold">Controle de Consultor</h1>
+                                            <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                </div>
+                            </div>
+
+                            <div class="bg-white shadow border-b">
+                                <div class="max-w-6xl mx-auto flex gap-4 px-4 py-3 overflow-x-auto">
+                                    <button onclick="app.currentPage = 'rotina'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-cm-turquesa text-white">✅ Rotina</button>
+                                    <button onclick="app.currentPage = 'analise'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">📊 Análise</button>
+                                    <button onclick="app.currentPage = 'config'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">🔧 Config</button>
+                                </div>
+                            </div>
+
+                            <div class="max-w-6xl mx-auto px-4 py-8">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h2 class="text-2xl font-bold text-cm-escuro">✅ Rotina de Trabalho</h2>
+                                    <div class="flex gap-2">
+                                        <button onclick="app.salvarDiaNoHistorico()" class="bg-cm-laranja hover:opacity-90 text-white px-4 py-2 rounded-lg font-semibold">💾 Salvar Dia</button>
+                                        <button onclick="app.resetarRotina()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold">🔄 Resetar</button>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h3 class="text-lg font-bold text-cm-escuro">Progresso do Dia</h3>
+                                        <span class="text-2xl font-bold text-cm-turquesa">${stats.percentual}%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-4">
+                                        <div class="bg-cm-verde h-4 rounded-full transition-all duration-500" style="width: ${stats.percentual}%"></div>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mt-2">${stats.completas} de ${stats.total} tarefas completadas</p>
+                                    <p class="text-xs text-orange-600 mt-3">💡 Marque cada tarefa individualmente para análise mais precisa!</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4">
+                                    ${this.rotinaTrabalho.map(bloco => {
+                                        const percBloco = this.calcularPercentualBloco(bloco);
+                                        return `
+                                        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                                            <div class="${bloco.cor} text-white p-4">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <div>
+                                                        <h3 class="text-xl font-bold">${bloco.horario}</h3>
+                                                        <p class="text-sm opacity-90">${bloco.etiqueta}</p>
+                                                    </div>
+                                                    <div class="text-right">
+                                                        <div class="text-2xl font-bold">${percBloco}%</div>
+                                                        <div class="text-xs opacity-90">${bloco.tarefas.filter(t => t.completo).length}/${bloco.tarefas.length}</div>
+                                                    </div>
+                                                </div>
+                                                <div class="w-full bg-white bg-opacity-30 rounded-full h-2">
+                                                    <div class="bg-white h-2 rounded-full transition-all duration-500" style="width: ${percBloco}%"></div>
+                                                </div>
+                                            </div>
+                                            <div class="p-4">
+                                                <h4 class="font-bold mb-3 text-gray-700">Tarefas:</h4>
+                                                <div class="space-y-3">
+                                                    ${bloco.tarefas.map(tarefa => `
+                                                        <label class="flex items-start gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded transition">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                class="checkbox-tarefa mt-1"
+                                                                ${tarefa.completo ? 'checked' : ''}
+                                                                onchange="app.toggleTarefa(${bloco.id}, ${tarefa.id})"
+                                                            />
+                                                            <span class="${tarefa.completo ? 'line-through text-gray-400' : 'text-gray-700'}">${tarefa.texto}</span>
+                                                        </label>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `}).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (this.currentPage === 'analise') {
+                    const analise = this.analisarDesempenho();
                     const historicoMes = this.getHistoricoMesAtual();
-                    const mediaPercentual = historicoMes.length > 0 
-                        ? historicoMes.reduce((sum, h) => sum + h.percentual, 0) / historicoMes.length 
-                        : 0;
-                    
-                    const diasTrabalhados = historicoMes.length;
-                    const melhorDia = historicoMes.length > 0 
-                        ? historicoMes.reduce((max, h) => h.percentual > max.percentual ? h : max)
-                        : null;
 
-                    const dicas = this.getDicasPersonalizadas();
-
-                    conteudo = `
-                        <div>
-                            <h2 class="text-2xl font-bold mb-6 text-cm-escuro">📊 Dashboard de Desempenho</h2>
-
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                                <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-laranja">
-                                    <p class="text-gray-600 text-sm">Desempenho Médio</p>
-                                    <p class="text-4xl font-bold text-cm-escuro">${mediaPercentual.toFixed(0)}%</p>
-                                    <p class="text-xs text-gray-500 mt-2">Este mês</p>
-                                </div>
-                                <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-verde">
-                                    <p class="text-gray-600 text-sm">Dias Trabalhados</p>
-                                    <p class="text-4xl font-bold text-cm-escuro">${diasTrabalhados}</p>
-                                    <p class="text-xs text-gray-500 mt-2">Registrados no sistema</p>
-                                </div>
-                                <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-turquesa">
-                                    <p class="text-gray-600 text-sm">Melhor Dia</p>
-                                    <p class="text-4xl font-bold text-cm-escuro">${melhorDia ? melhorDia.percentual + '%' : '--'}</p>
-                                    <p class="text-xs text-gray-500 mt-2">${melhorDia ? new Date(melhorDia.data).toLocaleDateString('pt-BR') : 'Nenhum registro'}</p>
+                    app.innerHTML = `
+                        <div class="min-h-screen bg-gray-50">
+                            <div class="bg-cm-escuro text-white shadow-lg">
+                                <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                    <h1 class="text-xl font-bold">Análise de Desempenho - ${nomeUsuario}</h1>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
                                 </div>
                             </div>
 
-                            <div class="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-lg shadow mb-8 border-l-4 border-cm-turquesa">
-                                <h3 class="text-xl font-bold mb-4 text-cm-escuro">💡 Análise e Dicas Personalizadas</h3>
-                                <p class="text-lg font-semibold mb-4 text-gray-700">${dicas.inicio}</p>
-                                <ul class="space-y-2">
-                                    ${dicas.dicas.map(dica => `
-                                        <li class="flex items-start gap-3">
-                                            <span class="text-cm-verde text-xl">✓</span>
-                                            <span class="text-gray-700">${dica}</span>
-                                        </li>
-                                    `).join('')}
-                                </ul>
+                            <div class="bg-white shadow border-b">
+                                <div class="max-w-6xl mx-auto flex gap-4 px-4 py-3 overflow-x-auto">
+                                    <button onclick="app.currentPage = 'rotina'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">✅ Rotina</button>
+                                    <button onclick="app.currentPage = 'analise'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-cm-turquesa text-white">📊 Análise</button>
+                                    <button onclick="app.currentPage = 'config'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">🔧 Config</button>
+                                </div>
                             </div>
 
-                            ${historicoMes.length === 0 ? `
-                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg shadow mb-8">
-                                    <h3 class="text-lg font-bold text-yellow-800 mb-2">⚠️ Como Começar?</h3>
-                                    <ol class="list-decimal list-inside space-y-2 text-gray-700">
-                                        <li>Vá para a aba <strong>"✅ Rotina"</strong></li>
-                                        <li>Marque as tarefas que você completar durante o dia</li>
-                                        <li>No final do expediente, clique em <strong>"💾 Salvar Dia"</strong></li>
-                                        <li>Volte aqui para ver seus gráficos e análises!</li>
-                                    </ol>
-                                </div>
-                            ` : `
-                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                                    <div class="bg-white p-6 rounded-lg shadow">
-                                        <h3 class="text-lg font-bold mb-4 text-cm-escuro">Evolução do Desempenho</h3>
-                                        <div style="height: 300px;">
-                                            <canvas id="graficoDesempenho"></canvas>
-                                        </div>
-                                    </div>
-                                    <div class="bg-white p-6 rounded-lg shadow">
-                                        <h3 class="text-lg font-bold mb-4 text-cm-escuro">Taxa de Conclusão por Tarefa</h3>
-                                        <div style="height: 300px;">
-                                            <canvas id="graficoTarefas"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="max-w-6xl mx-auto px-4 py-8">
+                                <h2 class="text-2xl font-bold mb-6 text-cm-escuro">📊 Análise Detalhada</h2>
 
-                                <div class="bg-white p-6 rounded-lg shadow">
-                                    <h3 class="text-lg font-bold mb-4 text-cm-escuro">Histórico Detalhado do Mês</h3>
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full text-sm">
-                                            <thead class="bg-cm-escuro text-white">
-                                                <tr>
-                                                    <th class="px-4 py-2 text-left">Data</th>
-                                                    <th class="px-4 py-2 text-left">Completas</th>
-                                                    <th class="px-4 py-2 text-left">Total</th>
-                                                    <th class="px-4 py-2 text-left">Desempenho</th>
-                                                    <th class="px-4 py-2 text-left">Avaliação</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${historicoMes.sort((a, b) => new Date(b.data) - new Date(a.data)).map((h, i) => `
-                                                    <tr class="border-b ${i % 2 === 0 ? 'bg-gray-50' : ''}">
-                                                        <td class="px-4 py-2 font-semibold">${new Date(h.data).toLocaleDateString('pt-BR')}</td>
-                                                        <td class="px-4 py-2">${h.tarefas_completas}</td>
-                                                        <td class="px-4 py-2">${h.total_tarefas}</td>
-                                                        <td class="px-4 py-2">
-                                                            <div class="flex items-center gap-2">
-                                                                <div class="w-20 bg-gray-200 rounded-full h-2">
-                                                                    <div class="bg-cm-verde h-2 rounded-full" style="width: ${h.percentual}%"></div>
-                                                                </div>
-                                                                <span class="font-bold text-cm-escuro">${h.percentual}%</span>
+                                ${historicoMes.length === 0 ? `
+                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
+                                        <h3 class="text-lg font-bold text-yellow-800 mb-2">⚠️ Sem Dados</h3>
+                                        <p class="text-gray-700">Você ainda não salvou nenhum dia. Vá para a aba Rotina, marque suas tarefas e clique em "Salvar Dia"!</p>
+                                    </div>
+                                ` : `
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                                        <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-turquesa">
+                                            <p class="text-gray-600 text-sm">Média Geral</p>
+                                            <p class="text-4xl font-bold text-cm-escuro">${analise.mediaGeral.toFixed(0)}%</p>
+                                            <p class="text-xs text-gray-500 mt-2">${historicoMes.length} dias registrados</p>
+                                        </div>
+                                        <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-laranja">
+                                            <p class="text-gray-600 text-sm">Total de Tarefas</p>
+                                            <p class="text-4xl font-bold text-cm-escuro">${stats.total}</p>
+                                            <p class="text-xs text-gray-500 mt-2">tarefas diárias</p>
+                                        </div>
+                                        <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-verde">
+                                            <p class="text-gray-600 text-sm">Hoje</p>
+                                            <p class="text-4xl font-bold text-cm-escuro">${stats.percentual}%</p>
+                                            <p class="text-xs text-gray-500 mt-2">${stats.completas}/${stats.total} completas</p>
+                                        </div>
+                                    </div>
+
+                                    ${analise.tarefasMaisFalhas.length > 0 ? `
+                                        <div class="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg shadow mb-6">
+                                            <h3 class="text-xl font-bold text-red-800 mb-4">🚨 Tarefas com Mais Falhas</h3>
+                                            <div class="space-y-3">
+                                                ${analise.tarefasMaisFalhas.map(t => `
+                                                    <div class="bg-white p-4 rounded">
+                                                        <div class="flex justify-between items-center mb-2">
+                                                            <span class="text-gray-700 font-semibold">${t.tarefa}</span>
+                                                            <span class="text-red-600 font-bold">${t.percentualFalha}% de falha</span>
+                                                        </div>
+                                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                                            <div class="bg-red-500 h-2 rounded-full" style="width: ${t.percentualFalha}%"></div>
+                                                        </div>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+
+                                    ${analise.blocosMaisFalhas.length > 0 ? `
+                                        <div class="bg-white p-6 rounded-lg shadow">
+                                            <h3 class="text-xl font-bold text-cm-escuro mb-4">📉 Blocos que Precisam de Atenção</h3>
+                                            <div class="space-y-3">
+                                                ${analise.blocosMaisFalhas.map(b => `
+                                                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded">
+                                                        <span class="font-semibold text-gray-700">${b.bloco}</span>
+                                                        <div class="flex items-center gap-3">
+                                                            <div class="w-32 bg-gray-200 rounded-full h-3">
+                                                                <div class="bg-cm-turquesa h-3 rounded-full" style="width: ${b.mediaPercentual}%"></div>
                                                             </div>
-                                                        </td>
-                                                        <td class="px-4 py-2">
-                                                            ${h.percentual >= 90 ? '🏆 Excelente' : 
-                                                              h.percentual >= 75 ? '👍 Bom' : 
-                                                              h.percentual >= 60 ? '⚠️ Regular' : 
-                                                              '🚨 Fraco'}
-                                                        </td>
-                                                    </tr>
+                                                            <span class="font-bold text-cm-escuro w-12 text-right">${b.mediaPercentual}%</span>
+                                                        </div>
+                                                    </div>
                                                 `).join('')}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            `}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                `}
+                            </div>
                         </div>
                     `;
-
-                    if (historicoMes.length > 0) {
-                        this.renderGraficos();
-                    }
-                }
-
-                else if (this.currentPage === 'rotina') {
-                    const tarefasCompletas = this.rotinaTrabalho.filter(t => t.completo).length;
-                    const totalTarefas = this.rotinaTrabalho.length;
-                    const percentualCompleto = totalTarefas > 0 ? Math.round((tarefasCompletas / totalTarefas) * 100) : 0;
-
-                    conteudo = `
-                        <div>
-                            <div class="flex justify-between items-center mb-6">
-                                <h2 class="text-2xl font-bold text-cm-escuro">✅ Rotina de Trabalho</h2>
-                                <div class="flex gap-2">
-                                    <button onclick="app.salvarDiaNoHistorico()" class="bg-cm-laranja hover:opacity-90 text-white px-4 py-2 rounded-lg font-semibold">💾 Salvar Dia</button>
-                                    <button onclick="app.adicionarBlocoRotina()" class="bg-cm-verde hover:opacity-90 text-cm-escuro px-4 py-2 rounded-lg font-semibold">➕ Adicionar</button>
-                                    <button onclick="app.resetarRotina()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold">🔄 Resetar</button>
+                } else {
+                    app.innerHTML = `
+                        <div class="min-h-screen bg-gray-50">
+                            <div class="bg-cm-escuro text-white shadow-lg">
+                                <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                    <h1 class="text-xl font-bold">Configurações - ${nomeUsuario}</h1>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
                                 </div>
                             </div>
-
-                            <div class="bg-white p-6 rounded-lg shadow mb-6">
-                                <div class="flex justify-between items-center mb-2">
-                                    <h3 class="text-lg font-bold text-cm-escuro">Progresso do Dia</h3>
-                                    <span class="text-2xl font-bold text-cm-turquesa">${percentualCompleto}%</span>
+                            <div class="bg-white shadow border-b">
+                                <div class="max-w-6xl mx-auto flex gap-4 px-4 py-3 overflow-x-auto">
+                                    <button onclick="app.currentPage = 'rotina'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">✅ Rotina</button>
+                                    <button onclick="app.currentPage = 'analise'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700">📊 Análise</button>
+                                    <button onclick="app.currentPage = 'config'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-cm-turquesa text-white">🔧 Config</button>
                                 </div>
-                                <div class="w-full bg-gray-200 rounded-full h-4">
-                                    <div class="bg-cm-verde h-4 rounded-full transition-all duration-500" style="width: ${percentualCompleto}%"></div>
+                            </div>
+                            <div class="max-w-6xl mx-auto px-4 py-8">
+                                <div class="bg-white p-6 rounded-lg shadow max-w-md">
+                                    <h2 class="text-2xl font-bold mb-4 text-cm-escuro">Informações da Conta</h2>
+                                    <p class="text-gray-600 mb-2"><strong>Email:</strong> ${this.currentUser.email}</p>
+                                    <p class="text-gray-600 mb-6"><strong>Nome:</strong> ${nomeUsuario}</p>
+                                    <p class="text-gray-600 mb-4">Dias salvos: <strong>${this.historicoDesempenho.length}</strong></p>
                                 </div>
-                                <p class="text-gray-600 text-sm mt-2">${tarefasCompletas} de ${totalTarefas} blocos completados</p>
-                                <p class="text-xs text-orange-600 mt-3">💡 Ao final do dia, clique em "💾 Salvar Dia" para registrar seu desempenho!</p>
-                            </div>
-
-                            <div class="grid grid-cols-1 gap-4">
-                                ${this.rotinaTrabalho.map(item => `
-                                    <div class="bg-white rounded-lg shadow-lg overflow-hidden ${item.completo ? 'opacity-75' : ''}">
-                                        <div class="${item.cor} text-white p-4 flex justify-between items-center">
-                                            <div>
-                                                <h3 class="text-xl font-bold">${item.horario}</h3>
-                                                <p class="text-sm opacity-90">${item.etiqueta}</p>
-                                            </div>
-                                            <div class="flex gap-2">
-                                                <button onclick="app.abrirModalEditarRotina(${item.id})" class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded transition" title="Editar">
-                                                    ✏️
-                                                </button>
-                                                <button onclick="app.deletarBlocoRotina(${item.id})" class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded transition" title="Deletar">
-                                                    🗑️
-                                                </button>
-                                                <button onclick="app.toggleTarefaCompleta(${item.id})" class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded transition">
-                                                    ${item.completo ? '✅' : '⭕'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="p-4">
-                                            <h4 class="font-bold mb-3 text-gray-700">O que fazer:</h4>
-                                            <ul class="space-y-2">
-                                                ${item.tarefas.map(tarefa => `
-                                                    <li class="flex items-start gap-2">
-                                                        <span class="text-cm-turquesa font-bold">•</span>
-                                                        <span class="${item.completo ? 'line-through text-gray-400' : 'text-gray-700'}">${tarefa}</span>
-                                                    </li>
-                                                `).join('')}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-
-                        <div id="modalEditarRotina" class="modal">
-                            <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-2xl m-4">
-                                <h3 class="text-xl font-bold text-cm-escuro mb-4">✏️ Editar Bloco de Rotina</h3>
-                                ${this.editingRotinaId ? (() => {
-                                    const item = this.rotinaTrabalho.find(r => r.id === this.editingRotinaId);
-                                    return `
-                                        <div class="grid gap-4">
-                                            <div>
-                                                <label class="block text-sm font-semibold mb-2 text-cm-escuro">Horário</label>
-                                                <input type="text" id="editHorario" value="${item.horario}" placeholder="Ex: 08:00 às 08:30" class="w-full px-4 py-2 border rounded-lg focus:border-cm-turquesa" />
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-semibold mb-2 text-cm-escuro">Nome da Etiqueta</label>
-                                                <input type="text" id="editEtiqueta" value="${item.etiqueta}" placeholder="Ex: Atendimento" class="w-full px-4 py-2 border rounded-lg focus:border-cm-turquesa" />
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-semibold mb-2 text-cm-escuro">Cor do Card</label>
-                                                <select id="editCor" class="w-full px-4 py-2 border rounded-lg focus:border-cm-turquesa">
-                                                    <option value="bg-green-500" ${item.cor === 'bg-green-500' ? 'selected' : ''}>🟢 Verde</option>
-                                                    <option value="bg-blue-500" ${item.cor === 'bg-blue-500' ? 'selected' : ''}>🔵 Azul</option>
-                                                    <option value="bg-red-500" ${item.cor === 'bg-red-500' ? 'selected' : ''}>🔴 Vermelho</option>
-                                                    <option value="bg-yellow-500" ${item.cor === 'bg-yellow-500' ? 'selected' : ''}>🟡 Amarelo</option>
-                                                    <option value="bg-purple-500" ${item.cor === 'bg-purple-500' ? 'selected' : ''}>🟣 Roxo</option>
-                                                    <option value="bg-orange-500" ${item.cor === 'bg-orange-500' ? 'selected' : ''}>🟠 Laranja</option>
-                                                    <option value="bg-pink-500" ${item.cor === 'bg-pink-500' ? 'selected' : ''}>🩷 Rosa</option>
-                                                    <option value="bg-gray-500" ${item.cor === 'bg-gray-500' ? 'selected' : ''}>⚫ Cinza</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-semibold mb-2 text-cm-escuro">Tarefas (uma por linha)</label>
-                                                <textarea id="editTarefas" rows="6" class="w-full px-4 py-2 border rounded-lg focus:border-cm-turquesa">${item.tarefas.join('\n')}</textarea>
-                                            </div>
-                                        </div>
-                                        <div class="flex gap-2 mt-6">
-                                            <button onclick="app.salvarEdicaoRotina()" class="flex-1 btn-cm text-white py-3 rounded-lg font-semibold">💾 Salvar</button>
-                                            <button onclick="app.fecharModalEditarRotina()" class="flex-1 bg-gray-400 text-white py-3 rounded-lg font-semibold">❌ Cancelar</button>
-                                        </div>
-                                    `;
-                                })() : ''}
                             </div>
                         </div>
                     `;
                 }
-
-                else if (this.currentPage === 'vendas') {
-                    conteudo = `
-                        <div>
-                            <h2 class="text-2xl font-bold mb-6 text-cm-escuro">🎫 Gerenciar Reservas</h2>
-                            <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-6">
-                                <p class="text-yellow-800">🚧 Módulo de vendas será implementado em breve com integração Supabase.</p>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                else if (this.currentPage === 'dashboard') {
-                    conteudo = `
-                        <div>
-                            <h2 class="text-2xl font-bold mb-6 text-cm-escuro">💰 Dashboard de Vendas</h2>
-                            <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-6">
-                                <p class="text-yellow-800">🚧 Dashboard de vendas será implementado em breve.</p>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                else if (this.currentPage === 'config') {
-                    conteudo = `
-                        <div>
-                            <h2 class="text-2xl font-bold mb-6 text-cm-escuro">🔧 Configurações</h2>
-                            <div class="bg-white p-6 rounded-lg shadow max-w-md">
-                                <h3 class="text-xl font-bold mb-4 text-cm-escuro">Informações da Conta</h3>
-                                <p class="text-gray-600 mb-2"><strong>Email:</strong> ${this.currentUser.email}</p>
-                                <p class="text-gray-600 mb-6"><strong>Nome:</strong> ${nomeUsuario}</p>
-                                
-                                <h3 class="text-xl font-bold mb-4 text-cm-escuro mt-8">Dados do Sistema</h3>
-                                <p class="text-gray-600 mb-4">Blocos de rotina: <strong>${this.rotinaTrabalho.length}</strong></p>
-                                <p class="text-gray-600 mb-4">Histórico de dias: <strong>${this.historicoDesempenho.length}</strong></p>
-                                
-                                <button onclick="app.logout()" class="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 font-semibold mt-8">
-                                    🚪 Sair da Conta
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                app.innerHTML = `
-                    <div class="min-h-screen bg-gray-50">
-                        <div class="bg-cm-escuro text-white shadow-lg">
-                            <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-                                <div class="flex items-center gap-4">
-                                    <div class="flex gap-1">
-                                        <div class="w-8 h-10 bg-cm-laranja rounded flex items-center justify-center">
-                                            <span class="text-cm-escuro text-xl font-bold">C</span>
-                                        </div>
-                                        <div class="w-8 h-10 bg-cm-verde rounded flex items-center justify-center">
-                                            <span class="text-cm-escuro text-xl font-bold">&</span>
-                                        </div>
-                                        <div class="w-8 h-10 bg-cm-turquesa rounded flex items-center justify-center">
-                                            <span class="text-cm-escuro text-xl font-bold">M</span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <h1 class="text-xl font-bold">Controle de Consultor</h1>
-                                        <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
-                                    </div>
-                                </div>
-                                <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
-                            </div>
-                        </div>
-
-                        <div class="bg-white shadow border-b">
-                            <div class="max-w-6xl mx-auto flex gap-4 px-4 py-3 overflow-x-auto">
-                                <button onclick="app.currentPage = 'desempenho'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'desempenho' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">📊 Desempenho</button>
-                                <button onclick="app.currentPage = 'rotina'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'rotina' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">✅ Rotina</button>
-                                <button onclick="app.currentPage = 'dashboard'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'dashboard' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">💰 Vendas</button>
-                                <button onclick="app.currentPage = 'vendas'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'vendas' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">🎫 Reservas</button>
-                                <button onclick="app.currentPage = 'config'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'config' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">🔧 Config</button>
-                            </div>
-                        </div>
-
-                        <div class="max-w-6xl mx-auto px-4 py-8">
-                            ${conteudo}
-                        </div>
-                    </div>
-                `;
             }
         }
 
