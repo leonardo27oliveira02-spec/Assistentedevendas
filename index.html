@@ -374,12 +374,7 @@
                     }))
                 }));
             }
-<div class="mb-6">
-    <button onclick="app.abrirModalCriarUsuario()" 
-        class="bg-cm-verde hover:opacity-90 text-white px-6 py-3 rounded-lg font-bold text-lg">
-        ➕ Criar Novo Usuário
-    </button>
-</div>
+
             async registrarUsuario(nome, email, senha) {
                 this.showLoading();
                 
@@ -1302,7 +1297,12 @@ async confirmarCriarUsuario() {
                         </div>
                     `;
                 } 
-                
+                <div class="mb-6">
+    <button onclick="app.abrirModalCriarUsuario()" 
+        class="bg-cm-verde hover:opacity-90 text-white px-6 py-3 rounded-lg font-bold text-lg">
+        ➕ Criar Novo Usuário
+    </button>
+</div>
                 else if (this.currentPage === 'usuarios' && this.isAdmin) {
                     app.innerHTML = `
                         <div class="min-h-screen bg-gray-50">
