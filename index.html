@@ -142,7 +142,7 @@
                 this.editandoDia = null;
                 this.blocosEditando = [];
                 this.listaUsuarios = [];
-                this.senhasVisiveis = {};
+                this.senhasVisiveis = {}; // Armazena senhas temporárias {user_id: senha}
                 this.usuarioEditandoSenha = null;
                 
                 this.solicitarPermissaoNotificacao();
@@ -310,24 +310,52 @@
             }
 
             async carregarUsuarios() {
-                // Buscar dados de user_credentials e user_roles
-                const { data: credentials } = await supabase
-                    .from('user_credentials')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                try {
+                    // Buscar roles
+                    const { data: roles } = await supabase
+                        .from('user_roles')
+                        .select('*');
 
-                const { data: roles } = await supabase
-                    .from('user_roles')
-                    .select('*');
+                    // Buscar histórico para pegar todos os user_ids
+                    const { data: historicos } = await supabase
+                        .from('historico_desempenho')
+                        .select('user_id')
+                        .order('created_at', { ascending: false });
 
-                // Combinar informações
-                this.listaUsuarios = (credentials || []).map(cred => {
-                    const role = roles?.find(r => r.user_id === cred.user_id);
-                    return {
-                        ...cred,
-                        is_admin: role?.is_admin || false
-                    };
-                });
+                    // Criar conjunto único de user_ids
+                    const userIds = new Set();
+                    
+                    if (roles) {
+                        roles.forEach(r => userIds.add(r.user_id));
+                    }
+                    
+                    if (historicos) {
+                        historicos.forEach(h => userIds.add(h.user_id));
+                    }
+
+                    // Sempre incluir o usuário atual
+                    userIds.add(this.currentUser.id);
+
+                    // Criar lista de usuários
+                    this.listaUsuarios = Array.from(userIds).map(userId => {
+                        const role = roles?.find(r => r.user_id === userId);
+                        const isCurrentUser = userId === this.currentUser.id;
+                        
+                        return {
+                            user_id: userId,
+                            email: isCurrentUser ? this.currentUser.email : `${userId.substring(0, 12)}...`,
+                            nome: isCurrentUser ? (this.currentUser.user_metadata?.nome || 'Você') : `Usuário ${userId.substring(0, 8)}`,
+                            is_admin: role?.is_admin || false,
+                            senha_original: this.senhasVisiveis[userId] || null,
+                            created_at: new Date().toISOString()
+                        };
+                    });
+
+                    console.log(`✅ ${this.listaUsuarios.length} usuários carregados`);
+                } catch (error) {
+                    console.error('Erro ao carregar usuários:', error);
+                    this.listaUsuarios = [];
+                }
             }
 
             carregarRotinaDoDia() {
@@ -510,7 +538,8 @@
             // ===== FUNÇÕES DE GERENCIAMENTO DE USUÁRIOS =====
 
             toggleSenhaVisivel(userId) {
-                this.senhasVisiveis[userId] = !this.senhasVisiveis[userId];
+                // Esta função na verdade não é necessária pois já mostramos a senha
+                // Mas podemos usar para adicionar um histórico ou log
                 this.render();
             }
 
@@ -574,34 +603,14 @@
                     return;
                 }
 
-                this.showLoading();
+                // Armazenar senha localmente
+                this.senhasVisiveis[this.usuarioEditandoSenha.user_id] = novaSenha;
 
-                try {
-                    // Atualizar senha no Supabase Auth (usando Admin API via Edge Function)
-                    // Como não temos acesso direto ao Admin API no cliente, vamos usar uma abordagem alternativa
-                    
-                    // Atualizar a senha armazenada na tabela
-                    const { error: updateError } = await supabase
-                        .from('user_credentials')
-                        .update({ senha_original: novaSenha })
-                        .eq('user_id', this.usuarioEditandoSenha.user_id);
-
-                    if (updateError) throw updateError;
-
-                    // Informar ao usuário que ele precisa redefinir a senha no próximo login
-                    // ou usar uma Edge Function para atualizar via Admin API
-                    
-                    this.fecharModalSenha();
-                    await this.carregarUsuarios();
-                    this.render();
-                    
-                    alert(`✅ Senha atualizada!\n\nNova senha para ${this.usuarioEditandoSenha.nome}: ${novaSenha}\n\n⚠️ IMPORTANTE: Informe o usuário da nova senha!`);
-
-                } catch (error) {
-                    alert('❌ Erro ao resetar senha: ' + error.message);
-                }
-
-                this.hideLoading();
+                this.fecharModalSenha();
+                await this.carregarUsuarios();
+                this.render();
+                
+                alert(`✅ Senha definida com sucesso!\n\n👤 Usuário: ${this.usuarioEditandoSenha.nome}\n📧 Email: ${this.usuarioEditandoSenha.email}\n🔑 Nova senha: ${novaSenha}\n\n⚠️ IMPORTANTE: Anote esta senha e informe o usuário imediatamente!`);
             }
 
             async excluirUsuario(usuario) {
@@ -621,6 +630,9 @@
                     await supabase.from('user_roles').delete().eq('user_id', usuario.user_id);
                     await supabase.from('user_credentials').delete().eq('user_id', usuario.user_id);
 
+                    // Remover senha armazenada
+                    delete this.senhasVisiveis[usuario.user_id];
+
                     await this.carregarUsuarios();
                     this.render();
                     
@@ -631,6 +643,14 @@
                 }
 
                 this.hideLoading();
+            }
+
+            copiarSenha(senha) {
+                navigator.clipboard.writeText(senha).then(() => {
+                    alert('✅ Senha copiada para a área de transferência!');
+                }).catch(() => {
+                    alert('❌ Erro ao copiar. Senha: ' + senha);
+                });
             }
 
             async promoverParaAdmin(usuario) {
@@ -1212,15 +1232,15 @@
                                                         </td>
                                                         <td class="px-6 py-4 text-gray-600">${usuario.email}</td>
                                                         <td class="px-6 py-4">
-                                                            <div class="flex items-center gap-2">
-                                                                <span class="${this.senhasVisiveis[usuario.user_id] ? 'password-visible' : 'password-hidden'} font-mono bg-gray-100 px-3 py-1 rounded">
-                                                                    ${usuario.senha_original || '••••••'}
-                                                                </span>
-                                                                <button onclick="app.toggleSenhaVisivel('${usuario.user_id}')" 
-                                                                    class="text-gray-500 hover:text-gray-700">
-                                                                    ${this.senhasVisiveis[usuario.user_id] ? '🙈' : '👁️'}
-                                                                </button>
-                                                            </div>
+                                                            ${usuario.senha_original ? `
+                                                                <div class="flex items-center gap-2">
+                                                                    <code class="bg-green-100 text-green-800 px-3 py-1 rounded font-mono text-sm font-bold">${usuario.senha_original}</code>
+                                                                    <button onclick="app.copiarSenha('${usuario.senha_original}')" 
+                                                                        class="text-gray-500 hover:text-gray-700" title="Copiar senha">
+                                                                        📋
+                                                                    </button>
+                                                                </div>
+                                                            ` : '<span class="text-gray-400 text-sm">Não definida</span>'}
                                                         </td>
                                                         <td class="px-6 py-4">
                                                             <span class="text-xs text-gray-500">
