@@ -384,23 +384,26 @@
                 this.hideLoading();
             }
 
-            async fazerLogin(email, senha) {
-                this.showLoading();
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: senha
-                });
-                this.hideLoading();
-                if (error) {
-                    alert('Erro ao fazer login: ' + error.message);
-                    return;
-                }
-                this.currentUser = data.user;
-                await this.verificarAdmin();
-                await this.carregarDados();
-                this.iniciarVerificacaoHorario();
-                this.render();
-            }
+      async fazerLogin(email, senha) {
+    this.showLoading();
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: senha
+        });
+
+        if (error) throw error;
+
+        this.currentUser = data.user;
+        await this.verificarAdmin();
+        await this.carregarDados();
+        this.iniciarVerificacaoHorario();
+        this.render();
+    } catch (error) {
+        alert('❌ Erro ao fazer login: ' + error.message);
+    }
+    this.hideLoading();
+}
 
             async logout() {
                 if (this.intervaloNotificacao) clearInterval(this.intervaloNotificacao);
