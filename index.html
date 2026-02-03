@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C&M - Controle de Consultor v2.0</title>
+    <title>C&M - Controle de Consultor v2.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -37,8 +37,38 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 50; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+        .modal.active { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .dragging {
+            opacity: 0.5;
+        }
+        .drag-over {
+            border-top: 3px solid #4ECDC4;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -46,6 +76,21 @@
         <div class="bg-white p-8 rounded-lg shadow-2xl flex flex-col items-center">
             <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-cm-turquesa border-solid"></div>
             <p class="mt-4 text-cm-escuro font-semibold">Carregando...</p>
+        </div>
+    </div>
+
+    <!-- Modal de Edição de Rotina -->
+    <div id="modalEditarRotina" class="modal">
+        <div class="modal-content">
+            <div class="bg-cm-escuro text-white p-6 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold" id="tituloModal">Editar Rotina</h2>
+                    <button onclick="app.fecharModalRotina()" class="text-white hover:text-gray-300 text-3xl">&times;</button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div id="conteudoModalRotina"></div>
+            </div>
         </div>
     </div>
 
@@ -73,6 +118,7 @@
                 this.intervaloNotificacao = null;
                 this.ultimaNotificacao = null;
                 this.editandoDia = null;
+                this.blocosEditando = [];
                 
                 this.solicitarPermissaoNotificacao();
                 this.verificarSessao();
@@ -146,7 +192,7 @@
 
                 this.intervaloNotificacao = setInterval(() => {
                     this.verificarHorarioTarefa();
-                }, 60000); // Verifica a cada 1 minuto
+                }, 60000);
 
                 this.verificarHorarioTarefa();
             }
@@ -206,7 +252,6 @@
             async carregarDados() {
                 this.showLoading();
                 
-                // Carregar rotinas semanais
                 const { data: rotinasSemana } = await supabase
                     .from('rotinas_semanais')
                     .select('*')
@@ -223,10 +268,8 @@
                     });
                 }
 
-                // Carregar rotina do dia atual
                 this.carregarRotinaDoDia();
 
-                // Carregar histórico
                 const { data: historico } = await supabase
                     .from('historico_desempenho')
                     .select('*')
@@ -402,12 +445,240 @@
                 }
             }
 
-            async salvarRotinaDia(dia) {
-                // Implementar salvar rotina editada
-                alert('Salvando rotina...');
-                await this.carregarDados();
+            // ===== FUNÇÕES DE EDIÇÃO DE ROTINA =====
+
+            abrirModalRotina(dia) {
+                this.editandoDia = dia;
+                this.blocosEditando = JSON.parse(JSON.stringify(this.rotinasSemana[dia] || []));
+                
+                // Se não houver blocos, criar um vazio
+                if (this.blocosEditando.length === 0) {
+                    this.blocosEditando.push(this.criarBlocoVazio());
+                }
+
+                document.getElementById('tituloModal').textContent = `Editar Rotina - ${this.getDiaSemanaTexto(dia)}`;
+                this.renderizarModalRotina();
+                document.getElementById('modalEditarRotina').classList.add('active');
+            }
+
+            fecharModalRotina() {
+                document.getElementById('modalEditarRotina').classList.remove('active');
                 this.editandoDia = null;
-                this.render();
+                this.blocosEditando = [];
+            }
+
+            criarBlocoVazio() {
+                return {
+                    id: Date.now(),
+                    dia_semana: this.editandoDia,
+                    horario: '08:00 - 09:00',
+                    horario_inicio: '08:00',
+                    etiqueta: 'Nova Tarefa',
+                    cor: 'bg-cm-turquesa',
+                    tarefas: ['Tarefa 1'],
+                    ordem: this.blocosEditando.length
+                };
+            }
+
+            adicionarBloco() {
+                this.blocosEditando.push(this.criarBlocoVazio());
+                this.renderizarModalRotina();
+            }
+
+            removerBloco(index) {
+                if (confirm('Deseja realmente remover este bloco?')) {
+                    this.blocosEditando.splice(index, 1);
+                    this.renderizarModalRotina();
+                }
+            }
+
+            adicionarTarefa(blocoIndex) {
+                this.blocosEditando[blocoIndex].tarefas.push(`Tarefa ${this.blocosEditando[blocoIndex].tarefas.length + 1}`);
+                this.renderizarModalRotina();
+            }
+
+            removerTarefa(blocoIndex, tarefaIndex) {
+                if (this.blocosEditando[blocoIndex].tarefas.length > 1) {
+                    this.blocosEditando[blocoIndex].tarefas.splice(tarefaIndex, 1);
+                    this.renderizarModalRotina();
+                } else {
+                    alert('Cada bloco precisa ter pelo menos 1 tarefa!');
+                }
+            }
+
+            atualizarCampoBloco(blocoIndex, campo, valor) {
+                this.blocosEditando[blocoIndex][campo] = valor;
+                
+                // Se alterou o horário de início, atualizar o campo horário também
+                if (campo === 'horario_inicio') {
+                    const inicio = valor;
+                    const partes = inicio.split(':');
+                    const horaFim = (parseInt(partes[0]) + 1).toString().padStart(2, '0');
+                    const fim = `${horaFim}:${partes[1]}`;
+                    this.blocosEditando[blocoIndex].horario = `${inicio} - ${fim}`;
+                }
+            }
+
+            atualizarTarefa(blocoIndex, tarefaIndex, valor) {
+                this.blocosEditando[blocoIndex].tarefas[tarefaIndex] = valor;
+            }
+
+            moverBlocoCima(index) {
+                if (index > 0) {
+                    const temp = this.blocosEditando[index];
+                    this.blocosEditando[index] = this.blocosEditando[index - 1];
+                    this.blocosEditando[index - 1] = temp;
+                    this.renderizarModalRotina();
+                }
+            }
+
+            moverBlocoBaixo(index) {
+                if (index < this.blocosEditando.length - 1) {
+                    const temp = this.blocosEditando[index];
+                    this.blocosEditando[index] = this.blocosEditando[index + 1];
+                    this.blocosEditando[index + 1] = temp;
+                    this.renderizarModalRotina();
+                }
+            }
+
+            async salvarRotinaDia() {
+                if (!this.blocosEditando || this.blocosEditando.length === 0) {
+                    alert('Adicione pelo menos um bloco de tarefas!');
+                    return;
+                }
+
+                this.showLoading();
+
+                try {
+                    // Deletar todas as rotinas antigas do dia
+                    await supabase
+                        .from('rotinas_semanais')
+                        .delete()
+                        .eq('dia_semana', this.editandoDia);
+
+                    // Inserir novas rotinas
+                    const rotinasPraSalvar = this.blocosEditando.map((bloco, index) => ({
+                        dia_semana: this.editandoDia,
+                        horario: bloco.horario,
+                        horario_inicio: bloco.horario_inicio,
+                        etiqueta: bloco.etiqueta,
+                        cor: bloco.cor,
+                        tarefas: bloco.tarefas,
+                        ordem: index
+                    }));
+
+                    const { error } = await supabase
+                        .from('rotinas_semanais')
+                        .insert(rotinasPraSalvar);
+
+                    if (error) throw error;
+
+                    await this.carregarDados();
+                    this.fecharModalRotina();
+                    alert('✅ Rotina salva com sucesso!');
+                    this.render();
+
+                } catch (error) {
+                    alert('Erro ao salvar rotina: ' + error.message);
+                }
+
+                this.hideLoading();
+            }
+
+            renderizarModalRotina() {
+                const conteudo = document.getElementById('conteudoModalRotina');
+                
+                conteudo.innerHTML = `
+                    <div class="space-y-6">
+                        ${this.blocosEditando.map((bloco, blocoIndex) => `
+                            <div class="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-bold text-cm-escuro">Bloco ${blocoIndex + 1}</h3>
+                                    <div class="flex gap-2">
+                                        ${blocoIndex > 0 ? `<button onclick="app.moverBlocoCima(${blocoIndex})" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1 rounded text-sm">⬆️</button>` : ''}
+                                        ${blocoIndex < this.blocosEditando.length - 1 ? `<button onclick="app.moverBlocoBaixo(${blocoIndex})" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1 rounded text-sm">⬇️</button>` : ''}
+                                        <button onclick="app.removerBloco(${blocoIndex})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">🗑️</button>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">⏰ Horário de Início</label>
+                                        <input type="time" value="${bloco.horario_inicio}" 
+                                            onchange="app.atualizarCampoBloco(${blocoIndex}, 'horario_inicio', this.value)"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">🏷️ Etiqueta</label>
+                                        <input type="text" value="${bloco.etiqueta}" 
+                                            onchange="app.atualizarCampoBloco(${blocoIndex}, 'etiqueta', this.value)"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa"
+                                            placeholder="Ex: Revisão Matinal" />
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">🎨 Cor do Bloco</label>
+                                    <div class="flex gap-2">
+                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-cm-turquesa'); app.renderizarModalRotina();" 
+                                            class="w-12 h-12 rounded-lg bg-cm-turquesa ${bloco.cor === 'bg-cm-turquesa' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
+                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-cm-laranja'); app.renderizarModalRotina();" 
+                                            class="w-12 h-12 rounded-lg bg-cm-laranja ${bloco.cor === 'bg-cm-laranja' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
+                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-cm-verde'); app.renderizarModalRotina();" 
+                                            class="w-12 h-12 rounded-lg bg-cm-verde ${bloco.cor === 'bg-cm-verde' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
+                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-purple-500'); app.renderizarModalRotina();" 
+                                            class="w-12 h-12 rounded-lg bg-purple-500 ${bloco.cor === 'bg-purple-500' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
+                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-blue-500'); app.renderizarModalRotina();" 
+                                            class="w-12 h-12 rounded-lg bg-blue-500 ${bloco.cor === 'bg-blue-500' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
+                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-pink-500'); app.renderizarModalRotina();" 
+                                            class="w-12 h-12 rounded-lg bg-pink-500 ${bloco.cor === 'bg-pink-500' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex justify-between items-center mb-3">
+                                        <label class="block text-sm font-semibold text-gray-700">📝 Tarefas</label>
+                                        <button onclick="app.adicionarTarefa(${blocoIndex})" 
+                                            class="bg-cm-verde hover:opacity-90 text-white px-3 py-1 rounded text-sm font-semibold">
+                                            ➕ Adicionar Tarefa
+                                        </button>
+                                    </div>
+                                    <div class="space-y-2">
+                                        ${bloco.tarefas.map((tarefa, tarefaIndex) => `
+                                            <div class="flex gap-2">
+                                                <input type="text" value="${tarefa}" 
+                                                    onchange="app.atualizarTarefa(${blocoIndex}, ${tarefaIndex}, this.value)"
+                                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa"
+                                                    placeholder="Digite a tarefa..." />
+                                                <button onclick="app.removerTarefa(${blocoIndex}, ${tarefaIndex})" 
+                                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm">
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+
+                        <button onclick="app.adicionarBloco()" 
+                            class="w-full bg-cm-turquesa hover:opacity-90 text-white py-3 rounded-lg font-semibold text-lg">
+                            ➕ Adicionar Novo Bloco de Tarefas
+                        </button>
+
+                        <div class="flex gap-3">
+                            <button onclick="app.salvarRotinaDia()" 
+                                class="flex-1 bg-cm-laranja hover:opacity-90 text-white py-3 rounded-lg font-bold text-lg">
+                                💾 Salvar Rotina
+                            </button>
+                            <button onclick="app.fecharModalRotina()" 
+                                class="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold text-lg">
+                                ❌ Cancelar
+                            </button>
+                        </div>
+                    </div>
+                `;
             }
 
             getHistoricoMesAtual() {
@@ -499,8 +770,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Controle de Consultor v2.0</h1>
-                            <p class="text-gray-600 text-center mb-6 text-sm">🔔 Com Notificações | 📅 Rotinas Semanais | 👑 Sistema Admin</p>
+                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Controle de Consultor v2.1</h1>
+                            <p class="text-gray-600 text-center mb-6 text-sm">🔔 Notificações | 📅 Rotinas | 👑 Admin | ✏️ Editor</p>
                             
                             <div class="flex gap-2 mb-6">
                                 <button id="btnLogin" onclick="app.mostrarAba('login')" class="flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white">Login</button>
@@ -553,7 +824,6 @@
                 const nomeUsuario = this.currentUser.user_metadata?.nome || this.currentUser.email.split('@')[0];
                 const stats = this.calcularEstatisticas();
 
-                // Menu de navegação
                 const menuAdmin = this.isAdmin ? `<button onclick="app.currentPage = 'admin'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'admin' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">👑 Admin</button>` : '';
 
                 const menu = `
@@ -585,7 +855,7 @@
                                             </div>
                                         </div>
                                         <div>
-                                            <h1 class="text-xl font-bold">C&M v2.0 ${this.isAdmin ? '👑' : ''}</h1>
+                                            <h1 class="text-xl font-bold">C&M v2.1 ${this.isAdmin ? '👑' : ''}</h1>
                                             <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
                                         </div>
                                     </div>
@@ -680,21 +950,28 @@
                             </div>
                             ${menu}
                             <div class="max-w-6xl mx-auto px-4 py-8">
-                                <h2 class="text-2xl font-bold mb-6 text-cm-escuro">Gerenciar Rotinas Semanais</h2>
+                                <h2 class="text-2xl font-bold mb-6 text-cm-escuro">✏️ Gerenciar Rotinas Semanais</h2>
                                 
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     ${[1, 2, 3, 4, 5, 6, 0].map(dia => `
-                                        <div class="bg-white p-6 rounded-lg shadow">
+                                        <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
                                             <h3 class="text-lg font-bold text-cm-escuro mb-3">${this.getDiaSemanaTexto(dia)}</h3>
                                             <p class="text-gray-600 mb-4">${this.rotinasSemana[dia]?.length || 0} blocos de tarefas</p>
-                                            <button onclick="alert('Funcionalidade de edição será implementada em breve!')" class="w-full bg-cm-turquesa text-white py-2 rounded-lg hover:opacity-90">Editar Rotina</button>
+                                            <button onclick="app.abrirModalRotina(${dia})" class="w-full bg-cm-turquesa text-white py-2 rounded-lg hover:opacity-90 font-semibold">
+                                                ✏️ Editar Rotina
+                                            </button>
                                         </div>
                                     `).join('')}
                                 </div>
 
                                 <div class="mt-8 bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg">
-                                    <h3 class="text-lg font-bold text-blue-800 mb-2">💡 Dica</h3>
-                                    <p class="text-gray-700">Como admin, você pode criar rotinas diferentes para cada dia da semana. Os consultores verão automaticamente a rotina do dia atual!</p>
+                                    <h3 class="text-lg font-bold text-blue-800 mb-2">💡 Como Usar</h3>
+                                    <ul class="text-gray-700 space-y-2">
+                                        <li>• Clique em "Editar Rotina" para configurar cada dia da semana</li>
+                                        <li>• Adicione blocos de tarefas com horários específicos</li>
+                                        <li>• Personalize cores e etiquetas para cada bloco</li>
+                                        <li>• As mudanças serão visíveis para todos os usuários</li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
