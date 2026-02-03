@@ -374,7 +374,12 @@
                     }))
                 }));
             }
-
+<div class="mb-6">
+    <button onclick="app.abrirModalCriarUsuario()" 
+        class="bg-cm-verde hover:opacity-90 text-white px-6 py-3 rounded-lg font-bold text-lg">
+        ➕ Criar Novo Usuário
+    </button>
+</div>
             async registrarUsuario(nome, email, senha) {
                 this.showLoading();
                 
@@ -1061,7 +1066,114 @@
                     formRegistro.style.display = 'block';
                 }
             }
+abrirModalCriarUsuario() {
+    const conteudo = document.getElementById('conteudoModalSenha');
+    document.getElementById('modalResetarSenha').querySelector('h2').textContent = '➕ Criar Novo Usuário';
+    
+    conteudo.innerHTML = `
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">👤 Nome Completo</label>
+                <input type="text" id="novoUsuarioNome" 
+                    placeholder="Ex: João Silva"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
+            </div>
 
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">📧 Email</label>
+                <input type="email" id="novoUsuarioEmail" 
+                    placeholder="usuario@exemplo.com"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">🔑 Senha</label>
+                <input type="text" id="novoUsuarioSenha" 
+                    placeholder="Mínimo 6 caracteres"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
+            </div>
+
+            <div class="flex items-center gap-3">
+                <input type="checkbox" id="novoUsuarioAdmin" class="w-5 h-5 accent-cm-turquesa" />
+                <label for="novoUsuarioAdmin" class="text-gray-700 font-semibold">👑 Criar como Administrador</label>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="app.confirmarCriarUsuario()" 
+                    class="flex-1 bg-cm-verde hover:opacity-90 text-white py-3 rounded-lg font-bold">
+                    ✅ Criar Usuário
+                </button>
+                <button onclick="app.fecharModalSenha()" 
+                    class="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold">
+                    ❌ Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('modalResetarSenha').classList.add('active');
+}
+
+async confirmarCriarUsuario() {
+    const nome = document.getElementById('novoUsuarioNome').value.trim();
+    const email = document.getElementById('novoUsuarioEmail').value.trim();
+    const senha = document.getElementById('novoUsuarioSenha').value;
+    const isAdmin = document.getElementById('novoUsuarioAdmin').checked;
+
+    if (!nome || !email || !senha) {
+        alert('❌ Preencha todos os campos!');
+        return;
+    }
+
+    if (senha.length < 6) {
+        alert('❌ A senha deve ter no mínimo 6 caracteres!');
+        return;
+    }
+
+    this.showLoading();
+
+    try {
+        // Criar usuário no Supabase Auth
+        const { data, error } = await supabase.auth.admin.createUser({
+            email: email,
+            password: senha,
+            email_confirm: true,
+            user_metadata: { nome: nome }
+        });
+
+        if (error) throw error;
+
+        // Salvar credenciais
+        await supabase.from('user_credentials').insert({
+            user_id: data.user.id,
+            email: email,
+            nome: nome,
+            senha_original: senha
+        });
+
+        // Se for admin, criar role
+        if (isAdmin) {
+            await supabase.from('user_roles').insert({
+                user_id: data.user.id,
+                is_admin: true
+            });
+        }
+
+        // Armazenar senha localmente
+        this.senhasVisiveis[data.user.id] = senha;
+
+        await this.carregarUsuarios();
+        this.fecharModalSenha();
+        this.render();
+
+        alert(`✅ Usuário criado com sucesso!\n\n👤 Nome: ${nome}\n📧 Email: ${email}\n🔑 Senha: ${senha}\n${isAdmin ? '👑 Admin: SIM' : ''}`);
+
+    } catch (error) {
+        alert('❌ Erro ao criar usuário: ' + error.message);
+    }
+
+    this.hideLoading();
+}
             render() {
                 if (!this.currentUser) {
                     this.renderLogin();
