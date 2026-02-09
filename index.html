@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C&M - Controle de Consultor v2.3</title>
+    <title>C&M - Controle de Consultor v2.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -63,6 +63,19 @@
             overflow-y: auto;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
+        .dragging {
+            opacity: 0.5;
+        }
+        .drag-over {
+            border-top: 3px solid #4ECDC4;
+        }
+        .password-hidden {
+            filter: blur(5px);
+            user-select: none;
+        }
+        .password-visible {
+            filter: none;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -103,28 +116,13 @@
         </div>
     </div>
 
-    <!-- Modal de Criar Usuário -->
-    <div id="modalCriarUsuario" class="modal">
-        <div class="modal-content max-w-md">
-            <div class="bg-cm-escuro text-white p-6 rounded-t-xl">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold">➕ Criar Novo Usuário</h2>
-                    <button onclick="app.fecharModalCriarUsuario()" class="text-white hover:text-gray-300 text-3xl">&times;</button>
-                </div>
-            </div>
-            <div class="p-6">
-                <div id="conteudoModalCriarUsuario"></div>
-            </div>
-        </div>
-    </div>
-
     <div id="app"></div>
 
     <script>
         const SUPABASE_URL = 'https://awppfluuudipkgrtrgyw.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cHBmbHV1dWRpcGtncnRyZ3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4MTk5MDYsImV4cCI6MjA4NTM5NTkwNn0.L7EjW4ytXMbVlGxhsMb8Hh77cjRpPr5Y-KG0dR4e35A';
         const SENHA_ADMIN = '071727';
-
+        
         if (!window.__cmSupabaseClient) {
             window.__cmSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
@@ -132,8 +130,6 @@
 
         class ControlConsultor {
             constructor() {
-                this.progressoDiario = null; // NOVO
-                this.autoSaveTimeout = null; // NOVO
                 this.currentUser = null;
                 this.isAdmin = false;
                 this.currentPage = 'rotina';
@@ -146,39 +142,13 @@
                 this.editandoDia = null;
                 this.blocosEditando = [];
                 this.listaUsuarios = [];
-                this.senhasVisiveis = {};
+                this.senhasVisiveis = {}; // Armazena senhas temporárias {user_id: senha}
                 this.usuarioEditandoSenha = null;
+                
                 this.solicitarPermissaoNotificacao();
                 this.verificarSessao();
             }
-            
-async salvarProgressoAutomatico() {
-    const hoje = this.getDataAtual();
-    const progresso = {
-        blocos: this.rotinaTrabalho.map(bloco => ({
-            id: bloco.id,
-            etiqueta: bloco.etiqueta,
-            tarefas: bloco.tarefas.map(t => ({
-                id: t.id,
-                texto: t.texto,
-                completo: t.completo,
-                comentarios: t.comentarios || [],
-                metricas: t.metricas || null
-            }))
-        }))
-    };
-    
-    await supabase
-        .from('progresso_diario')
-        .upsert({
-            user_id: this.currentUser.id,
-            data: hoje,
-            dia_semana: this.diaAtual,
-            progresso: progresso,
-            updated_at: new Date().toISOString()
-        });
-}
-            
+
             async solicitarPermissaoNotificacao() {
                 if ('Notification' in window && Notification.permission === 'default') {
                     await Notification.requestPermission();
@@ -188,6 +158,7 @@ async salvarProgressoAutomatico() {
             async verificarSessao() {
                 this.showLoading();
                 const { data: { session } } = await supabase.auth.getSession();
+                
                 if (session) {
                     this.currentUser = session.user;
                     await this.verificarAdmin();
@@ -206,6 +177,7 @@ async salvarProgressoAutomatico() {
                     .select('is_admin')
                     .eq('user_id', this.currentUser.id)
                     .single();
+                
                 this.isAdmin = data?.is_admin || false;
             }
 
@@ -214,7 +186,9 @@ async salvarProgressoAutomatico() {
                     alert('❌ Senha incorreta!');
                     return;
                 }
+
                 this.showLoading();
+
                 const { data, error } = await supabase
                     .from('user_roles')
                     .upsert({
@@ -222,13 +196,16 @@ async salvarProgressoAutomatico() {
                         is_admin: true
                     })
                     .select();
+
                 if (!error) {
                     await supabase.rpc('criar_rotinas_padrao_semana');
+                    
                     this.isAdmin = true;
                     alert('✅ Você agora é Admin! Recarregando...');
                     await this.carregarDados();
                     this.render();
                 }
+
                 this.hideLoading();
             }
 
@@ -236,19 +213,24 @@ async salvarProgressoAutomatico() {
                 if (this.intervaloNotificacao) {
                     clearInterval(this.intervaloNotificacao);
                 }
+
                 this.intervaloNotificacao = setInterval(() => {
                     this.verificarHorarioTarefa();
                 }, 60000);
+
                 this.verificarHorarioTarefa();
             }
 
             verificarHorarioTarefa() {
                 if (!this.rotinaTrabalho || this.rotinaTrabalho.length === 0) return;
+                
                 const agora = new Date();
                 const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+                
                 this.rotinaTrabalho.forEach(bloco => {
                     if (bloco.horario_inicio === horaAtual) {
                         const chave = `${bloco.horario_inicio}-${bloco.etiqueta}`;
+                        
                         if (this.ultimaNotificacao !== chave) {
                             this.mostrarNotificacao(bloco);
                             this.ultimaNotificacao = chave;
@@ -260,6 +242,7 @@ async salvarProgressoAutomatico() {
             mostrarNotificacao(bloco) {
                 if ('Notification' in window && Notification.permission === 'granted') {
                     const tarefasTexto = bloco.tarefas.slice(0, 2).map(t => `• ${t.texto}`).join('\n');
+                    
                     new Notification(`⏰ ${bloco.horario} - ${bloco.etiqueta}`, {
                         body: `Hora de começar!\n\n${tarefasTexto}`,
                         icon: '/favicon.ico',
@@ -285,13 +268,20 @@ async salvarProgressoAutomatico() {
                 return new Date().toISOString().split('T')[0];
             }
 
+            getDataMesAtual() {
+                const hoje = new Date();
+                return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+            }
+
             async carregarDados() {
                 this.showLoading();
+                
                 const { data: rotinasSemana } = await supabase
                     .from('rotinas_semanais')
                     .select('*')
                     .order('dia_semana', { ascending: true })
                     .order('ordem', { ascending: true });
+                
                 if (rotinasSemana) {
                     this.rotinasSemana = {};
                     rotinasSemana.forEach(r => {
@@ -301,192 +291,178 @@ async salvarProgressoAutomatico() {
                         this.rotinasSemana[r.dia_semana].push(r);
                     });
                 }
+
                 this.carregarRotinaDoDia();
+
                 const { data: historico } = await supabase
                     .from('historico_desempenho')
                     .select('*')
                     .eq('user_id', this.currentUser.id)
                     .order('data', { ascending: false });
                 this.historicoDesempenho = historico || [];
+
+                // Carregar lista de usuários se for admin
                 if (this.isAdmin) {
                     await this.carregarUsuarios();
                 }
+
                 this.hideLoading();
             }
 
             async carregarUsuarios() {
                 try {
-                    const { data: roles } = await supabase.from('user_roles').select('*');
-                    const { data: credentials } = await supabase.from('user_credentials').select('*');
+                    // Buscar roles
+                    const { data: roles } = await supabase
+                        .from('user_roles')
+                        .select('*');
+
+                    // Buscar histórico para pegar todos os user_ids
+                    const { data: historicos } = await supabase
+                        .from('historico_desempenho')
+                        .select('user_id')
+                        .order('created_at', { ascending: false });
+
+                    // Criar conjunto único de user_ids
                     const userIds = new Set();
-                    if (roles) roles.forEach(r => userIds.add(r.user_id));
-                    if (credentials) credentials.forEach(c => userIds.add(c.user_id));
+                    
+                    if (roles) {
+                        roles.forEach(r => userIds.add(r.user_id));
+                    }
+                    
+                    if (historicos) {
+                        historicos.forEach(h => userIds.add(h.user_id));
+                    }
+
+                    // Sempre incluir o usuário atual
                     userIds.add(this.currentUser.id);
+
+                    // Criar lista de usuários
                     this.listaUsuarios = Array.from(userIds).map(userId => {
                         const role = roles?.find(r => r.user_id === userId);
-                        const cred = credentials?.find(c => c.user_id === userId);
                         const isCurrentUser = userId === this.currentUser.id;
+                        
                         return {
                             user_id: userId,
-                            email: cred?.email || (isCurrentUser ? this.currentUser.email : `${userId.substring(0, 12)}...`),
-                            nome: cred?.nome || (isCurrentUser ? (this.currentUser.user_metadata?.nome || 'Você') : `Usuário ${userId.substring(0, 8)}`),
+                            email: isCurrentUser ? this.currentUser.email : `${userId.substring(0, 12)}...`,
+                            nome: isCurrentUser ? (this.currentUser.user_metadata?.nome || 'Você') : `Usuário ${userId.substring(0, 8)}`,
                             is_admin: role?.is_admin || false,
-                            senha_original: cred?.senha_original || null,
+                            senha_original: this.senhasVisiveis[userId] || null,
                             created_at: new Date().toISOString()
                         };
                     });
+
+                    console.log(`✅ ${this.listaUsuarios.length} usuários carregados`);
                 } catch (error) {
                     console.error('Erro ao carregar usuários:', error);
                     this.listaUsuarios = [];
                 }
             }
 
-        async carregarRotinaDoDia() {
-    // Busca progresso salvo do dia
-    const { data: progressoSalvo } = await supabase
-    const { data: progresso_diario } = await supabase
-        
-        .from('progresso_diario')
-        .select('progresso')
-        .eq('user_id', this.currentUser.id)
-        .eq('data', hoje)
-        .single();
-    
-    this.rotinaTrabalho = rotinasDia.map(r => {
-        const blocoSalvo = progressoSalvo?.progresso?.blocos?.find(b => b.id === r.id);
-        
-        return {
-            id: r.id,
-            horario: r.horario,
-            horario_inicio: r.horario_inicio,
-            etiqueta: r.etiqueta,
-            cor: r.cor,
-            tarefas: r.tarefas.map((tarefa, idx) => {
-                const tarefaSalva = blocoSalvo?.tarefas?.find(t => t.id === idx);
-                return {
-                    texto: tarefa,
-                    completo: tarefaSalva?.completo || false,
-                    comentarios: tarefaSalva?.comentarios || [],
-                    metricas: tarefaSalva?.metricas || null,
-                    id: idx
-                };
-            })
-        };
-    });
-}
+            carregarRotinaDoDia() {
+                const rotinasDia = this.rotinasSemana[this.diaAtual] || [];
+                
+                this.rotinaTrabalho = rotinasDia.map(r => ({
+                    id: r.id,
+                    horario: r.horario,
+                    horario_inicio: r.horario_inicio,
+                    etiqueta: r.etiqueta,
+                    cor: r.cor,
+                    tarefas: r.tarefas.map((tarefa, idx) => ({
+                        texto: tarefa,
+                        completo: false,
+                        id: idx
+                    }))
+                }));
+            }
 
             async registrarUsuario(nome, email, senha) {
                 this.showLoading();
+                
                 const { data, error } = await supabase.auth.signUp({
                     email: email,
                     password: senha,
-                    options: { data: { nome: nome } }
+                    options: {
+                        data: { nome: nome }
+                    }
                 });
+
                 if (!error && data.user) {
-                    await supabase.from('user_credentials').insert({
-                        user_id: data.user.id,
-                        email: email,
-                        nome: nome,
-                        senha_original: senha
-                    });
+                    // Salvar credenciais na tabela personalizada
+                    await supabase
+                        .from('user_credentials')
+                        .insert({
+                            user_id: data.user.id,
+                            email: email,
+                            nome: nome,
+                            senha_original: senha // Armazenar senha para admin poder recuperar
+                        });
                 }
+
                 this.hideLoading();
+
                 if (error) {
                     alert('Erro ao criar conta: ' + error.message);
                     return;
                 }
+
                 alert('✅ Conta criada! Você já pode fazer login.');
                 this.renderLogin();
             }
 
-            async criarUsuarioPorAdmin(nome, email, senha) {
+            async fazerLogin(email, senha) {
                 this.showLoading();
-                try {
-                    const { data, error } = await supabase.auth.signUp({
-                        email: email,
-                        password: senha,
-                        options: {
-                            data: { nome: nome },
-                            emailRedirectTo: window.location.origin
-                        }
-                    });
-                    if (error) throw error;
-                    await supabase.from('user_credentials').insert({
-                        user_id: data.user.id,
-                        email: email,
-                        nome: nome,
-                        senha_original: senha
-                    });
-                    await supabase.from('user_roles').insert({
-                        user_id: data.user.id,
-                        is_admin: false
-                    });
-                    await this.carregarUsuarios();
-                    this.fecharModalCriarUsuario();
-                    alert(`✅ Usuário criado!\n\n👤 ${nome}\n📧 ${email}\n🔑 ${senha}\n\n⚠️ Login disponível imediatamente!`);
-                    this.render();
-                } catch (error) {
-                    alert('❌ Erro: ' + error.message);
-                }
+                
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: senha
+                });
+
                 this.hideLoading();
+
+                if (error) {
+                    alert('Erro ao fazer login: ' + error.message);
+                    return;
+                }
+
+                this.currentUser = data.user;
+                await this.verificarAdmin();
+                await this.carregarDados();
+                this.iniciarVerificacaoHorario();
+                this.render();
             }
 
-      async fazerLogin(email, senha) {
-    this.showLoading();
-    try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: senha
-        });
-
-        if (error) throw error;
-
-        this.currentUser = data.user;
-        await this.verificarAdmin();
-        await this.carregarDados();
-        this.iniciarVerificacaoHorario();
-        this.render();
-    } catch (error) {
-        alert('❌ Erro ao fazer login: ' + error.message);
-    }
-    this.hideLoading();
-}
-
             async logout() {
-                if (this.intervaloNotificacao) clearInterval(this.intervaloNotificacao);
+                if (this.intervaloNotificacao) {
+                    clearInterval(this.intervaloNotificacao);
+                }
                 await supabase.auth.signOut();
                 this.currentUser = null;
                 this.isAdmin = false;
                 this.renderLogin();
             }
-            
-toggleTarefa(blocoId, tarefaId) {
-    const bloco = this.rotinaTrabalho.find(r => r.id === blocoId);
-    if (bloco) {
-        const tarefa = bloco.tarefas.find(t => t.id === tarefaId);
-        if (tarefa) {
-            tarefa.completo = !tarefa.completo;
-            
-            // NOVO: Debounce auto-save
-            clearTimeout(this.autoSaveTimeout);
-            this.autoSaveTimeout = setTimeout(() => {
-                this.salvarProgressoAutomatico();
-            }, 500);
-            
-            this.render();
-        }
-    }
-}
+
+            toggleTarefa(blocoId, tarefaId) {
+                const bloco = this.rotinaTrabalho.find(r => r.id === blocoId);
+                if (bloco) {
+                    const tarefa = bloco.tarefas.find(t => t.id === tarefaId);
+                    if (tarefa) {
+                        tarefa.completo = !tarefa.completo;
+                        this.render();
+                    }
+                }
+            }
 
             calcularEstatisticas() {
                 let totalTarefas = 0;
                 let tarefasCompletas = 0;
+
                 this.rotinaTrabalho.forEach(bloco => {
                     bloco.tarefas.forEach(tarefa => {
                         totalTarefas++;
                         if (tarefa.completo) tarefasCompletas++;
                     });
                 });
+
                 return {
                     total: totalTarefas,
                     completas: tarefasCompletas,
@@ -509,26 +485,41 @@ toggleTarefa(blocoId, tarefaId) {
             async salvarDiaNoHistorico() {
                 const hoje = this.getDataAtual();
                 const stats = this.calcularEstatisticas();
+
                 const detalhes = this.rotinaTrabalho.map(bloco => ({
                     etiqueta: bloco.etiqueta,
                     horario: bloco.horario,
-                    tarefas: bloco.tarefas.map(t => ({ texto: t.texto, completo: t.completo })),
+                    tarefas: bloco.tarefas.map(t => ({
+                        texto: t.texto,
+                        completo: t.completo
+                    })),
                     percentual: this.calcularPercentualBloco(bloco)
                 }));
+
                 this.showLoading();
-                await supabase.from('historico_desempenho').delete().eq('user_id', this.currentUser.id).eq('data', hoje);
-                const { error } = await supabase.from('historico_desempenho').insert({
-                    user_id: this.currentUser.id,
-                    data: hoje,
-                    tarefas_completas: stats.completas,
-                    total_tarefas: stats.total,
-                    percentual: stats.percentual,
-                    detalhes: detalhes
-                });
+
+                await supabase
+                    .from('historico_desempenho')
+                    .delete()
+                    .eq('user_id', this.currentUser.id)
+                    .eq('data', hoje);
+
+                const { error } = await supabase
+                    .from('historico_desempenho')
+                    .insert({
+                        user_id: this.currentUser.id,
+                        data: hoje,
+                        tarefas_completas: stats.completas,
+                        total_tarefas: stats.total,
+                        percentual: stats.percentual,
+                        detalhes: detalhes
+                    });
+
                 await this.carregarDados();
                 this.hideLoading();
+
                 if (!error) {
-                    alert(`✅ Dia registrado!\n\n📊 ${stats.completas}/${stats.total} tarefas (${stats.percentual}%)`);
+                    alert(`✅ Dia registrado!\n\n📊 Você completou ${stats.completas} de ${stats.total} tarefas (${stats.percentual}%)`);
                 }
             }
 
@@ -539,65 +530,17 @@ toggleTarefa(blocoId, tarefaId) {
                             tarefa.completo = false;
                         });
                     });
-                    alert('Rotina resetada!');
+                    alert('Rotina resetada com sucesso!');
                     this.render();
                 }
             }
 
-            abrirModalCriarUsuario() {
-                this.renderizarModalCriarUsuario();
-                document.getElementById('modalCriarUsuario').classList.add('active');
-            }
+            // ===== FUNÇÕES DE GERENCIAMENTO DE USUÁRIOS =====
 
-            fecharModalCriarUsuario() {
-                document.getElementById('modalCriarUsuario').classList.remove('active');
-            }
-
-            renderizarModalCriarUsuario() {
-                const conteudo = document.getElementById('conteudoModalCriarUsuario');
-                conteudo.innerHTML = `
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">👤 Nome Completo</label>
-                            <input type="text" id="criarNome" placeholder="Digite o nome" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">📧 Email</label>
-                            <input type="email" id="criarEmail" placeholder="Digite o email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">🔑 Senha</label>
-                            <input type="text" id="criarSenha" placeholder="Mínimo 6 caracteres" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
-                            <p class="text-xs text-gray-500 mt-2">Mínimo de 6 caracteres</p>
-                        </div>
-                        <div class="flex gap-3">
-                            <button onclick="app.confirmarCriarUsuario()" class="flex-1 bg-cm-laranja hover:opacity-90 text-white py-3 rounded-lg font-bold">✅ Criar</button>
-                            <button onclick="app.fecharModalCriarUsuario()" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold">❌ Cancelar</button>
-                        </div>
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
-                            <p class="text-xs text-gray-700">ℹ️ O usuário poderá fazer login imediatamente.</p>
-                        </div>
-                    </div>
-                `;
-            }
-
-            async confirmarCriarUsuario() {
-                const nome = document.getElementById('criarNome').value;
-                const email = document.getElementById('criarEmail').value;
-                const senha = document.getElementById('criarSenha').value;
-                if (!nome || !email || !senha) {
-                    alert('❌ Preencha todos os campos!');
-                    return;
-                }
-                if (senha.length < 6) {
-                    alert('❌ Senha deve ter no mínimo 6 caracteres!');
-                    return;
-                }
-                if (!email.includes('@')) {
-                    alert('❌ Email inválido!');
-                    return;
-                }
-                await this.criarUsuarioPorAdmin(nome, email, senha);
+            toggleSenhaVisivel(userId) {
+                // Esta função na verdade não é necessária pois já mostramos a senha
+                // Mas podemos usar para adicionar um histórico ou log
+                this.render();
             }
 
             abrirModalResetarSenha(usuario) {
@@ -613,23 +556,36 @@ toggleTarefa(blocoId, tarefaId) {
 
             renderizarModalSenha() {
                 const conteudo = document.getElementById('conteudoModalSenha');
+                
                 conteudo.innerHTML = `
                     <div class="space-y-4">
                         <div class="bg-blue-50 p-4 rounded-lg">
                             <p class="text-sm text-gray-700"><strong>Usuário:</strong> ${this.usuarioEditandoSenha.nome}</p>
                             <p class="text-sm text-gray-700"><strong>Email:</strong> ${this.usuarioEditandoSenha.email}</p>
                         </div>
+
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">🔑 Nova Senha</label>
-                            <input type="text" id="novaSenhaInput" placeholder="Mínimo 6 caracteres" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
+                            <input 
+                                type="text" 
+                                id="novaSenhaInput" 
+                                placeholder="Digite a nova senha (mínimo 6 caracteres)"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" 
+                            />
                             <p class="text-xs text-gray-500 mt-2">Mínimo de 6 caracteres</p>
                         </div>
+
                         <div class="flex gap-3">
-                            <button onclick="app.confirmarResetarSenha()" class="flex-1 bg-cm-laranja hover:opacity-90 text-white py-3 rounded-lg font-bold">💾 Resetar</button>
-                            <button onclick="app.fecharModalSenha()" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold">❌ Cancelar</button>
+                            <button onclick="app.confirmarResetarSenha()" class="flex-1 bg-cm-laranja hover:opacity-90 text-white py-3 rounded-lg font-bold">
+                                💾 Resetar Senha
+                            </button>
+                            <button onclick="app.fecharModalSenha()" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold">
+                                ❌ Cancelar
+                            </button>
                         </div>
+
                         <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
-                            <p class="text-xs text-gray-700">⚠️ Informe o usuário da nova senha.</p>
+                            <p class="text-xs text-gray-700">⚠️ <strong>Atenção:</strong> Esta ação irá alterar a senha do usuário. Certifique-se de informá-lo da nova senha.</p>
                         </div>
                     </div>
                 `;
@@ -637,78 +593,120 @@ toggleTarefa(blocoId, tarefaId) {
 
             async confirmarResetarSenha() {
                 const novaSenha = document.getElementById('novaSenhaInput').value;
+
                 if (!novaSenha || novaSenha.length < 6) {
-                    alert('❌ Senha deve ter no mínimo 6 caracteres!');
+                    alert('❌ A senha deve ter no mínimo 6 caracteres!');
                     return;
                 }
-                if (!confirm(`Confirma resetar senha de ${this.usuarioEditandoSenha.nome}?`)) return;
+
+                if (!confirm(`Confirma resetar a senha de ${this.usuarioEditandoSenha.nome}?`)) {
+                    return;
+                }
+
+                // Armazenar senha localmente
                 this.senhasVisiveis[this.usuarioEditandoSenha.user_id] = novaSenha;
-                await supabase.from('user_credentials').update({ senha_original: novaSenha }).eq('user_id', this.usuarioEditandoSenha.user_id);
+
                 this.fecharModalSenha();
                 await this.carregarUsuarios();
                 this.render();
-                alert(`✅ Senha definida!\n\n👤 ${this.usuarioEditandoSenha.nome}\n📧 ${this.usuarioEditandoSenha.email}\n🔑 ${novaSenha}\n\n⚠️ Anote e informe o usuário!`);
+                
+                alert(`✅ Senha definida com sucesso!\n\n👤 Usuário: ${this.usuarioEditandoSenha.nome}\n📧 Email: ${this.usuarioEditandoSenha.email}\n🔑 Nova senha: ${novaSenha}\n\n⚠️ IMPORTANTE: Anote esta senha e informe o usuário imediatamente!`);
             }
 
             async excluirUsuario(usuario) {
-                if (!confirm(`⚠️ Excluir ${usuario.nome}?\n\nNÃO pode ser desfeito!`)) return;
-                if (!confirm(`ÚLTIMA CONFIRMAÇÃO: Excluir ${usuario.email}?`)) return;
+                if (!confirm(`⚠️ Tem certeza que deseja EXCLUIR o usuário ${usuario.nome}?\n\nEsta ação NÃO pode ser desfeita!`)) {
+                    return;
+                }
+
+                if (!confirm(`ÚLTIMA CONFIRMAÇÃO: Excluir ${usuario.email}?`)) {
+                    return;
+                }
+
                 this.showLoading();
+
                 try {
+                    // Deletar dados relacionados
                     await supabase.from('historico_desempenho').delete().eq('user_id', usuario.user_id);
                     await supabase.from('user_roles').delete().eq('user_id', usuario.user_id);
                     await supabase.from('user_credentials').delete().eq('user_id', usuario.user_id);
+
+                    // Remover senha armazenada
                     delete this.senhasVisiveis[usuario.user_id];
+
                     await this.carregarUsuarios();
                     this.render();
-                    alert('✅ Usuário excluído!');
+                    
+                    alert('✅ Usuário excluído com sucesso!');
+
                 } catch (error) {
-                    alert('❌ Erro: ' + error.message);
+                    alert('❌ Erro ao excluir usuário: ' + error.message);
                 }
+
                 this.hideLoading();
             }
 
             copiarSenha(senha) {
                 navigator.clipboard.writeText(senha).then(() => {
-                    alert('✅ Senha copiada!');
+                    alert('✅ Senha copiada para a área de transferência!');
                 }).catch(() => {
                     alert('❌ Erro ao copiar. Senha: ' + senha);
                 });
             }
 
             async promoverParaAdmin(usuario) {
-                if (!confirm(`Promover ${usuario.nome} para ADMIN?`)) return;
+                if (!confirm(`Promover ${usuario.nome} para ADMINISTRADOR?`)) {
+                    return;
+                }
+
                 this.showLoading();
-                const { error } = await supabase.from('user_roles').upsert({
-                    user_id: usuario.user_id,
-                    is_admin: true
-                });
+
+                const { error } = await supabase
+                    .from('user_roles')
+                    .upsert({
+                        user_id: usuario.user_id,
+                        is_admin: true
+                    });
+
                 if (!error) {
                     await this.carregarUsuarios();
                     this.render();
-                    alert(`✅ ${usuario.nome} agora é Admin!`);
+                    alert(`✅ ${usuario.nome} agora é Administrador!`);
                 }
+
                 this.hideLoading();
             }
 
             async removerAdmin(usuario) {
-                if (!confirm(`Remover privilégios de admin de ${usuario.nome}?`)) return;
+                if (!confirm(`Remover privilégios de administrador de ${usuario.nome}?`)) {
+                    return;
+                }
+
                 this.showLoading();
-                const { error } = await supabase.from('user_roles').update({ is_admin: false }).eq('user_id', usuario.user_id);
+
+                const { error } = await supabase
+                    .from('user_roles')
+                    .update({ is_admin: false })
+                    .eq('user_id', usuario.user_id);
+
                 if (!error) {
                     await this.carregarUsuarios();
                     this.render();
-                    alert(`✅ ${usuario.nome} não é mais Admin!`);
+                    alert(`✅ ${usuario.nome} não é mais Administrador!`);
                 }
+
                 this.hideLoading();
             }
+
+            // ===== FUNÇÕES DE EDIÇÃO DE ROTINA =====
 
             abrirModalRotina(dia) {
                 this.editandoDia = dia;
                 this.blocosEditando = JSON.parse(JSON.stringify(this.rotinasSemana[dia] || []));
+                
                 if (this.blocosEditando.length === 0) {
                     this.blocosEditando.push(this.criarBlocoVazio());
                 }
+
                 document.getElementById('tituloModal').textContent = `Editar Rotina - ${this.getDiaSemanaTexto(dia)}`;
                 this.renderizarModalRotina();
                 document.getElementById('modalEditarRotina').classList.add('active');
@@ -739,7 +737,7 @@ toggleTarefa(blocoId, tarefaId) {
             }
 
             removerBloco(index) {
-                if (confirm('Remover este bloco?')) {
+                if (confirm('Deseja realmente remover este bloco?')) {
                     this.blocosEditando.splice(index, 1);
                     this.renderizarModalRotina();
                 }
@@ -761,6 +759,7 @@ toggleTarefa(blocoId, tarefaId) {
 
             atualizarCampoBloco(blocoIndex, campo, valor) {
                 this.blocosEditando[blocoIndex][campo] = valor;
+                
                 if (campo === 'horario_inicio') {
                     const inicio = valor;
                     const partes = inicio.split(':');
@@ -794,12 +793,18 @@ toggleTarefa(blocoId, tarefaId) {
 
             async salvarRotinaDia() {
                 if (!this.blocosEditando || this.blocosEditando.length === 0) {
-                    alert('Adicione pelo menos um bloco!');
+                    alert('Adicione pelo menos um bloco de tarefas!');
                     return;
                 }
+
                 this.showLoading();
+
                 try {
-                    await supabase.from('rotinas_semanais').delete().eq('dia_semana', this.editandoDia);
+                    await supabase
+                        .from('rotinas_semanais')
+                        .delete()
+                        .eq('dia_semana', this.editandoDia);
+
                     const rotinasPraSalvar = this.blocosEditando.map((bloco, index) => ({
                         dia_semana: this.editandoDia,
                         horario: bloco.horario,
@@ -809,20 +814,28 @@ toggleTarefa(blocoId, tarefaId) {
                         tarefas: bloco.tarefas,
                         ordem: index
                     }));
-                    const { error } = await supabase.from('rotinas_semanais').insert(rotinasPraSalvar);
+
+                    const { error } = await supabase
+                        .from('rotinas_semanais')
+                        .insert(rotinasPraSalvar);
+
                     if (error) throw error;
+
                     await this.carregarDados();
                     this.fecharModalRotina();
-                    alert('✅ Rotina salva!');
+                    alert('✅ Rotina salva com sucesso!');
                     this.render();
+
                 } catch (error) {
-                    alert('Erro: ' + error.message);
+                    alert('Erro ao salvar rotina: ' + error.message);
                 }
+
                 this.hideLoading();
             }
 
             renderizarModalRotina() {
                 const conteudo = document.getElementById('conteudoModalRotina');
+                
                 conteudo.innerHTML = `
                     <div class="space-y-6">
                         ${this.blocosEditando.map((bloco, blocoIndex) => `
@@ -835,22 +848,26 @@ toggleTarefa(blocoId, tarefaId) {
                                         <button onclick="app.removerBloco(${blocoIndex})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">🗑️</button>
                                     </div>
                                 </div>
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">⏰ Horário</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">⏰ Horário de Início</label>
                                         <input type="time" value="${bloco.horario_inicio}" 
-                                            onchange="app.atualizarCampoBloco(${blocoIndex}, 'horario_inicio', this.value); app.renderizarModalRotina();"
+                                            onchange="app.atualizarCampoBloco(${blocoIndex}, 'horario_inicio', this.value)"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
                                     </div>
+
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">🏷️ Etiqueta</label>
                                         <input type="text" value="${bloco.etiqueta}" 
                                             onchange="app.atualizarCampoBloco(${blocoIndex}, 'etiqueta', this.value)"
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa"
+                                            placeholder="Ex: Revisão Matinal" />
                                     </div>
                                 </div>
+
                                 <div class="mb-4">
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">🎨 Cor</label>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">🎨 Cor do Bloco</label>
                                     <div class="flex gap-2">
                                         <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-cm-turquesa'); app.renderizarModalRotina();" 
                                             class="w-12 h-12 rounded-lg bg-cm-turquesa ${bloco.cor === 'bg-cm-turquesa' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
@@ -866,33 +883,47 @@ toggleTarefa(blocoId, tarefaId) {
                                             class="w-12 h-12 rounded-lg bg-pink-500 ${bloco.cor === 'bg-pink-500' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
                                     </div>
                                 </div>
+
                                 <div>
                                     <div class="flex justify-between items-center mb-3">
                                         <label class="block text-sm font-semibold text-gray-700">📝 Tarefas</label>
                                         <button onclick="app.adicionarTarefa(${blocoIndex})" 
-                                            class="bg-cm-verde hover:opacity-90 text-white px-3 py-1 rounded text-sm font-semibold">➕ Adicionar</button>
+                                            class="bg-cm-verde hover:opacity-90 text-white px-3 py-1 rounded text-sm font-semibold">
+                                            ➕ Adicionar Tarefa
+                                        </button>
                                     </div>
                                     <div class="space-y-2">
                                         ${bloco.tarefas.map((tarefa, tarefaIndex) => `
                                             <div class="flex gap-2">
                                                 <input type="text" value="${tarefa}" 
                                                     onchange="app.atualizarTarefa(${blocoIndex}, ${tarefaIndex}, this.value)"
-                                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
+                                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa"
+                                                    placeholder="Digite a tarefa..." />
                                                 <button onclick="app.removerTarefa(${blocoIndex}, ${tarefaIndex})" 
-                                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm">🗑️</button>
+                                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm">
+                                                    🗑️
+                                                </button>
                                             </div>
                                         `).join('')}
                                     </div>
                                 </div>
                             </div>
                         `).join('')}
+
                         <button onclick="app.adicionarBloco()" 
-                            class="w-full bg-cm-turquesa hover:opacity-90 text-white py-3 rounded-lg font-semibold text-lg">➕ Novo Bloco</button>
+                            class="w-full bg-cm-turquesa hover:opacity-90 text-white py-3 rounded-lg font-semibold text-lg">
+                            ➕ Adicionar Novo Bloco de Tarefas
+                        </button>
+
                         <div class="flex gap-3">
                             <button onclick="app.salvarRotinaDia()" 
-                                class="flex-1 bg-cm-laranja hover:opacity-90 text-white py-3 rounded-lg font-bold text-lg">💾 Salvar</button>
+                                class="flex-1 bg-cm-laranja hover:opacity-90 text-white py-3 rounded-lg font-bold text-lg">
+                                💾 Salvar Rotina
+                            </button>
                             <button onclick="app.fecharModalRotina()" 
-                                class="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold text-lg">❌ Cancelar</button>
+                                class="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold text-lg">
+                                ❌ Cancelar
+                            </button>
                         </div>
                     </div>
                 `;
@@ -902,6 +933,7 @@ toggleTarefa(blocoId, tarefaId) {
                 const hoje = new Date();
                 const mesAtual = hoje.getMonth();
                 const anoAtual = hoje.getFullYear();
+                
                 return this.historicoDesempenho.filter(h => {
                     const dataHist = new Date(h.data);
                     return dataHist.getMonth() === mesAtual && dataHist.getFullYear() === anoAtual;
@@ -910,6 +942,7 @@ toggleTarefa(blocoId, tarefaId) {
 
             analisarDesempenho() {
                 const historicoMes = this.getHistoricoMesAtual();
+                
                 if (historicoMes.length === 0) {
                     return {
                         mediaGeral: 0,
@@ -917,7 +950,9 @@ toggleTarefa(blocoId, tarefaId) {
                         blocosMaisFalhas: []
                     };
                 }
+
                 const mediaGeral = historicoMes.reduce((sum, h) => sum + h.percentual, 0) / historicoMes.length;
+
                 const contagemTarefas = {};
                 historicoMes.forEach(dia => {
                     dia.detalhes.forEach(bloco => {
@@ -933,6 +968,7 @@ toggleTarefa(blocoId, tarefaId) {
                         });
                     });
                 });
+
                 const tarefasMaisFalhas = Object.entries(contagemTarefas)
                     .map(([tarefa, dados]) => ({
                         tarefa,
@@ -941,6 +977,7 @@ toggleTarefa(blocoId, tarefaId) {
                     .filter(t => t.percentualFalha > 30)
                     .sort((a, b) => b.percentualFalha - a.percentualFalha)
                     .slice(0, 5);
+
                 const contagemBlocos = {};
                 historicoMes.forEach(dia => {
                     dia.detalhes.forEach(bloco => {
@@ -951,6 +988,7 @@ toggleTarefa(blocoId, tarefaId) {
                         contagemBlocos[bloco.etiqueta].soma += bloco.percentual;
                     });
                 });
+
                 const blocosMaisFalhas = Object.entries(contagemBlocos)
                     .map(([bloco, dados]) => ({
                         bloco,
@@ -958,6 +996,7 @@ toggleTarefa(blocoId, tarefaId) {
                     }))
                     .sort((a, b) => a.mediaPercentual - b.mediaPercentual)
                     .slice(0, 3);
+
                 return { mediaGeral, tarefasMaisFalhas, blocosMaisFalhas };
             }
 
@@ -979,22 +1018,25 @@ toggleTarefa(blocoId, tarefaId) {
                                     </div>
                                 </div>
                             </div>
-                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Controle de Consultor v2.3</h1>
+                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Controle de Consultor v2.2</h1>
                             <p class="text-gray-600 text-center mb-6 text-sm">🔔 Notificações | 📅 Rotinas | 👑 Admin | 👥 Usuários</p>
+                            
                             <div class="flex gap-2 mb-6">
                                 <button id="btnLogin" onclick="app.mostrarAba('login')" class="flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white">Login</button>
                                 <button id="btnRegistro" onclick="app.mostrarAba('registro')" class="flex-1 px-4 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700">Criar Conta</button>
                             </div>
+
                             <div id="formLogin">
                                 <input type="email" id="loginEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <input type="password" id="loginSenha" placeholder="Senha" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
-                                <button onclick="app.fazerLogin(document.getElementById('loginEmail').value, document.getElementById('loginSenha').value)" class="w-full btn-cm text-white py-3 rounded-lg font-semibold">Entrar</button>
+                                <button onclick="app.fazerLogin(document.getElementById('loginEmail').value, document.getElementById('loginSenha').value)" class="w-full btn-cm text-white py-3 rounded-lg font-semibold transition">Entrar</button>
                             </div>
+
                             <div id="formRegistro" style="display: none;">
                                 <input type="text" id="registroNome" placeholder="Nome Completo" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <input type="email" id="registroEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <input type="password" id="registroSenha" placeholder="Senha (mínimo 6 caracteres)" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
-                                <button onclick="app.registrarUsuario(document.getElementById('registroNome').value, document.getElementById('registroEmail').value, document.getElementById('registroSenha').value)" class="w-full btn-cm text-white py-3 rounded-lg font-semibold">Criar Conta</button>
+                                <button onclick="app.registrarUsuario(document.getElementById('registroNome').value, document.getElementById('registroEmail').value, document.getElementById('registroSenha').value)" class="w-full btn-cm text-white py-3 rounded-lg font-semibold transition">Criar Conta</button>
                             </div>
                         </div>
                     </div>
@@ -1006,6 +1048,7 @@ toggleTarefa(blocoId, tarefaId) {
                 const btnRegistro = document.getElementById('btnRegistro');
                 const formLogin = document.getElementById('formLogin');
                 const formRegistro = document.getElementById('formRegistro');
+
                 if (aba === 'login') {
                     btnLogin.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white';
                     btnRegistro.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700';
@@ -1024,13 +1067,16 @@ toggleTarefa(blocoId, tarefaId) {
                     this.renderLogin();
                     return;
                 }
+
                 const app = document.getElementById('app');
                 const nomeUsuario = this.currentUser.user_metadata?.nome || this.currentUser.email.split('@')[0];
                 const stats = this.calcularEstatisticas();
+
                 const menuAdmin = this.isAdmin ? `
                     <button onclick="app.currentPage = 'admin'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'admin' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">📅 Rotinas</button>
                     <button onclick="app.currentPage = 'usuarios'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'usuarios' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">👥 Usuários</button>
                 ` : '';
+
                 const menu = `
                     <div class="bg-white shadow border-b">
                         <div class="max-w-6xl mx-auto flex gap-4 px-4 py-3 overflow-x-auto">
@@ -1060,14 +1106,16 @@ toggleTarefa(blocoId, tarefaId) {
                                             </div>
                                         </div>
                                         <div>
-                                            <h1 class="text-xl font-bold">C&M v2.3 ${this.isAdmin ? '👑' : ''}</h1>
+                                            <h1 class="text-xl font-bold">C&M v2.2 ${this.isAdmin ? '👑' : ''}</h1>
                                             <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
                                         </div>
                                     </div>
                                     <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
                                 </div>
                             </div>
+
                             ${menu}
+
                             <div class="max-w-6xl mx-auto px-4 py-8">
                                 <div class="flex justify-between items-center mb-6">
                                     <h2 class="text-2xl font-bold text-cm-escuro">✅ Rotina de ${this.getDiaSemanaTexto(this.diaAtual)}</h2>
@@ -1076,9 +1124,10 @@ toggleTarefa(blocoId, tarefaId) {
                                         <button onclick="app.resetarRotina()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold">🔄 Resetar</button>
                                     </div>
                                 </div>
+
                                 ${this.rotinaTrabalho.length === 0 ? `
                                     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
-                                        <h3 class="text-lg font-bold text-yellow-800 mb-2">⚠️ Sem Rotina</h3>
+                                        <h3 class="text-lg font-bold text-yellow-800 mb-2">⚠️ Sem Rotina Programada</h3>
                                         <p class="text-gray-700">Não há rotina programada para ${this.getDiaSemanaTexto(this.diaAtual)}.</p>
                                         ${this.isAdmin ? '<p class="mt-2 text-gray-700">Vá para <strong>Rotinas</strong> e programe!</p>' : '<p class="mt-2 text-gray-700">Entre em contato com o administrador.</p>'}
                                     </div>
@@ -1092,9 +1141,9 @@ toggleTarefa(blocoId, tarefaId) {
                                             <div class="bg-cm-verde h-4 rounded-full transition-all duration-500" style="width: ${stats.percentual}%"></div>
                                         </div>
                                         <p class="text-gray-600 text-sm mt-2">${stats.completas} de ${stats.total} tarefas completadas</p>
-                                        <p class="text-xs text-orange-600 mt-3
                                         <p class="text-xs text-orange-600 mt-3">🔔 Você receberá notificações na hora de cada tarefa!</p>
                                     </div>
+
                                     <div class="grid grid-cols-1 gap-4">
                                         ${this.rotinaTrabalho.map(bloco => {
                                             const percBloco = this.calcularPercentualBloco(bloco);
@@ -1141,6 +1190,7 @@ toggleTarefa(blocoId, tarefaId) {
                         </div>
                     `;
                 } 
+                
                 else if (this.currentPage === 'usuarios' && this.isAdmin) {
                     app.innerHTML = `
                         <div class="min-h-screen bg-gray-50">
@@ -1151,12 +1201,8 @@ toggleTarefa(blocoId, tarefaId) {
                             </div>
                             ${menu}
                             <div class="max-w-6xl mx-auto px-4 py-8">
-                                <div class="flex justify-between items-center mb-6">
-                                    <h2 class="text-2xl font-bold text-cm-escuro">Lista de Usuários</h2>
-                                    <button onclick="app.abrirModalCriarUsuario()" class="bg-cm-laranja hover:opacity-90 text-white px-6 py-3 rounded-lg font-bold">
-                                        ➕ Criar Novo Usuário
-                                    </button>
-                                </div>
+                                <h2 class="text-2xl font-bold mb-6 text-cm-escuro">Lista de Usuários</h2>
+                                
                                 <div class="bg-white rounded-lg shadow overflow-hidden">
                                     <div class="overflow-x-auto">
                                         <table class="w-full">
@@ -1234,6 +1280,7 @@ toggleTarefa(blocoId, tarefaId) {
                                         </table>
                                     </div>
                                 </div>
+
                                 <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-turquesa">
                                         <p class="text-gray-600 text-sm">Total de Usuários</p>
@@ -1248,20 +1295,21 @@ toggleTarefa(blocoId, tarefaId) {
                                         <p class="text-4xl font-bold text-cm-escuro">${this.listaUsuarios.filter(u => !u.is_admin).length}</p>
                                     </div>
                                 </div>
+
                                 <div class="mt-8 bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg">
                                     <h3 class="text-lg font-bold text-blue-800 mb-2">💡 Funcionalidades</h3>
                                     <ul class="text-gray-700 space-y-2 text-sm">
-                                        <li>• <strong>➕ Criar Usuário:</strong> Cria novos usuários sem necessidade de confirmação de email</li>
-                                        <li>• <strong>🔑 Resetar senha:</strong> Define uma nova senha para o usuário</li>
-                                        <li>• <strong>👑 Promover/Remover Admin:</strong> Concede ou remove privilégios administrativos</li>
+                                        <li>• <strong>👁️ Visualizar senha:</strong> Clique no ícone do olho para ver/ocultar a senha</li>
+                                        <li>• <strong>🔑 Resetar senha:</strong> Permite definir uma nova senha para o usuário</li>
+                                        <li>• <strong>👑 Promover/Remover Admin:</strong> Conceder ou remover privilégios administrativos</li>
                                         <li>• <strong>🗑️ Excluir usuário:</strong> Remove permanentemente o usuário do sistema</li>
-                                        <li>• <strong>📋 Copiar senha:</strong> Copia a senha para a área de transferência</li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
                     `;
                 }
+                
                 else if (this.currentPage === 'admin' && this.isAdmin) {
                     app.innerHTML = `
                         <div class="min-h-screen bg-gray-50">
@@ -1273,6 +1321,7 @@ toggleTarefa(blocoId, tarefaId) {
                             ${menu}
                             <div class="max-w-6xl mx-auto px-4 py-8">
                                 <h2 class="text-2xl font-bold mb-6 text-cm-escuro">Rotinas da Semana</h2>
+                                
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     ${[1, 2, 3, 4, 5, 6, 0].map(dia => `
                                         <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
@@ -1284,6 +1333,7 @@ toggleTarefa(blocoId, tarefaId) {
                                         </div>
                                     `).join('')}
                                 </div>
+
                                 <div class="mt-8 bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg">
                                     <h3 class="text-lg font-bold text-blue-800 mb-2">💡 Como Usar</h3>
                                     <ul class="text-gray-700 space-y-2">
@@ -1297,9 +1347,11 @@ toggleTarefa(blocoId, tarefaId) {
                         </div>
                     `;
                 }
+                
                 else if (this.currentPage === 'analise') {
                     const analise = this.analisarDesempenho();
                     const historicoMes = this.getHistoricoMesAtual();
+
                     app.innerHTML = `
                         <div class="min-h-screen bg-gray-50">
                             <div class="bg-cm-escuro text-white shadow-lg">
@@ -1356,6 +1408,7 @@ toggleTarefa(blocoId, tarefaId) {
                         </div>
                     `;
                 }
+                
                 else {
                     app.innerHTML = `
                         <div class="min-h-screen bg-gray-50">
@@ -1367,8 +1420,6 @@ toggleTarefa(blocoId, tarefaId) {
                             ${menu}
                             <div class="max-w-6xl mx-auto px-4 py-8">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div class="bg-white p-6
-
                                     <div class="bg-white p-6 rounded-lg shadow">
                                         <h2 class="text-xl font-bold mb-4 text-cm-escuro">Informações da Conta</h2>
                                         <p class="text-gray-600 mb-2"><strong>Email:</strong> ${this.currentUser.email}</p>
@@ -1380,6 +1431,7 @@ toggleTarefa(blocoId, tarefaId) {
                                             </button>
                                         ` : ''}
                                     </div>
+                                    
                                     <div class="bg-white p-6 rounded-lg shadow">
                                         <h2 class="text-xl font-bold mb-4 text-cm-escuro">Notificações</h2>
                                         <p class="text-gray-600 mb-4">Status: <strong>${'Notification' in window && Notification.permission === 'granted' ? '✅ Ativadas' : '❌ Desativadas'}</strong></p>
@@ -1402,4 +1454,3 @@ toggleTarefa(blocoId, tarefaId) {
     </script>
 </body>
 </html>
-
