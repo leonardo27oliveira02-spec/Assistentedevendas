@@ -344,6 +344,8 @@ async salvarProgressoAutomatico() {
         async carregarRotinaDoDia() {
     // Busca progresso salvo do dia
     const { data: progressoSalvo } = await supabase
+    const { data: progresso_diario } = await supabase
+        
         .from('progresso_diario')
         .select('progresso')
         .eq('user_id', this.currentUser.id)
