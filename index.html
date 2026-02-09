@@ -341,11 +341,8 @@ async salvarProgressoAutomatico() {
                 }
             }
 
-          async carregarRotinaDoDia() {
-    const rotinasDia = this.rotinasSemana[this.diaAtual] || [];
-    const hoje = this.getDataAtual();
-    
-    // Tentar carregar progresso salvo
+        async carregarRotinaDoDia() {
+    // Busca progresso salvo do dia
     const { data: progressoSalvo } = await supabase
         .from('progresso_diario')
         .select('progresso')
