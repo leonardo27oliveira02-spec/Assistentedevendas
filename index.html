@@ -132,6 +132,8 @@
 
         class ControlConsultor {
             constructor() {
+                this.progressoDiario = null; // NOVO
+                this.autoSaveTimeout = null; // NOVO
                 this.currentUser = null;
                 this.isAdmin = false;
                 this.currentPage = 'rotina';
@@ -149,7 +151,34 @@
                 this.solicitarPermissaoNotificacao();
                 this.verificarSessao();
             }
-
+            
+async salvarProgressoAutomatico() {
+    const hoje = this.getDataAtual();
+    const progresso = {
+        blocos: this.rotinaTrabalho.map(bloco => ({
+            id: bloco.id,
+            etiqueta: bloco.etiqueta,
+            tarefas: bloco.tarefas.map(t => ({
+                id: t.id,
+                texto: t.texto,
+                completo: t.completo,
+                comentarios: t.comentarios || [],
+                metricas: t.metricas || null
+            }))
+        }))
+    };
+    
+    await supabase
+        .from('progresso_diario')
+        .upsert({
+            user_id: this.currentUser.id,
+            data: hoje,
+            dia_semana: this.diaAtual,
+            progresso: progresso,
+            updated_at: new Date().toISOString()
+        });
+}
+            
             async solicitarPermissaoNotificacao() {
                 if ('Notification' in window && Notification.permission === 'default') {
                     await Notification.requestPermission();
@@ -312,21 +341,40 @@
                 }
             }
 
-            carregarRotinaDoDia() {
-                const rotinasDia = this.rotinasSemana[this.diaAtual] || [];
-                this.rotinaTrabalho = rotinasDia.map(r => ({
-                    id: r.id,
-                    horario: r.horario,
-                    horario_inicio: r.horario_inicio,
-                    etiqueta: r.etiqueta,
-                    cor: r.cor,
-                    tarefas: r.tarefas.map((tarefa, idx) => ({
-                        texto: tarefa,
-                        completo: false,
-                        id: idx
-                    }))
-                }));
-            }
+          async carregarRotinaDoDia() {
+    const rotinasDia = this.rotinasSemana[this.diaAtual] || [];
+    const hoje = this.getDataAtual();
+    
+    // Tentar carregar progresso salvo
+    const { data: progressoSalvo } = await supabase
+        .from('progresso_diario')
+        .select('progresso')
+        .eq('user_id', this.currentUser.id)
+        .eq('data', hoje)
+        .single();
+    
+    this.rotinaTrabalho = rotinasDia.map(r => {
+        const blocoSalvo = progressoSalvo?.progresso?.blocos?.find(b => b.id === r.id);
+        
+        return {
+            id: r.id,
+            horario: r.horario,
+            horario_inicio: r.horario_inicio,
+            etiqueta: r.etiqueta,
+            cor: r.cor,
+            tarefas: r.tarefas.map((tarefa, idx) => {
+                const tarefaSalva = blocoSalvo?.tarefas?.find(t => t.id === idx);
+                return {
+                    texto: tarefa,
+                    completo: tarefaSalva?.completo || false,
+                    comentarios: tarefaSalva?.comentarios || [],
+                    metricas: tarefaSalva?.metricas || null,
+                    id: idx
+                };
+            })
+        };
+    });
+}
 
             async registrarUsuario(nome, email, senha) {
                 this.showLoading();
@@ -412,17 +460,24 @@
                 this.isAdmin = false;
                 this.renderLogin();
             }
-
-            toggleTarefa(blocoId, tarefaId) {
-                const bloco = this.rotinaTrabalho.find(r => r.id === blocoId);
-                if (bloco) {
-                    const tarefa = bloco.tarefas.find(t => t.id === tarefaId);
-                    if (tarefa) {
-                        tarefa.completo = !tarefa.completo;
-                        this.render();
-                    }
-                }
-            }
+            
+toggleTarefa(blocoId, tarefaId) {
+    const bloco = this.rotinaTrabalho.find(r => r.id === blocoId);
+    if (bloco) {
+        const tarefa = bloco.tarefas.find(t => t.id === tarefaId);
+        if (tarefa) {
+            tarefa.completo = !tarefa.completo;
+            
+            // NOVO: Debounce auto-save
+            clearTimeout(this.autoSaveTimeout);
+            this.autoSaveTimeout = setTimeout(() => {
+                this.salvarProgressoAutomatico();
+            }, 500);
+            
+            this.render();
+        }
+    }
+}
 
             calcularEstatisticas() {
                 let totalTarefas = 0;
