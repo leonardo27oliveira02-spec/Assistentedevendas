@@ -658,11 +658,6 @@
                                 <input type="email" id="loginEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <input type="password" id="loginSenha" placeholder="Senha" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <button onclick="app.fazerLogin()" class="w-full btn-primary">Entrar</button>
-                                
-                                <!-- BOTÃO SECRETO ADMIN -->
-                                <button onclick="app.abrirModalAdmin()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg mt-3 text-sm transition">
-                                    👑 Modo Admin
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -748,6 +743,13 @@
                                 <button onclick="app.iniciarRotina('${periodo}')" class="w-full btn-primary text-lg py-4">
                                     🚀 Iniciar Rotina de ${periodoTexto}
                                 </button>
+
+                                ${!this.isAdmin ? `
+                                    <!-- BOTÃO SECRETO ADMIN - Só aparece se NÃO for admin -->
+                                    <button onclick="app.abrirModalAdmin()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg mt-4 text-sm transition">
+                                        👑 Ativar Modo Admin
+                                    </button>
+                                ` : ''}
                             </div>
 
                             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
@@ -1565,7 +1567,7 @@
                 }
                 
                 if (!this.currentUser) {
-                    alert('⚠️ Você precisa fazer LOGIN primeiro!\n\nFaça login e depois clique em "Modo Admin".');
+                    alert('⚠️ Você precisa fazer LOGIN primeiro!');
                     this.fecharModalAdmin();
                     return;
                 }
@@ -1586,8 +1588,15 @@
                     // Atualizar flag local
                     this.isAdmin = true;
                     
-                    alert('🎉 PARABÉNS!\n\nVocê agora é ADMINISTRADOR! 👑\n\n📍 Próximos passos:\n1. Faça LOGOUT\n2. Faça LOGIN novamente\n3. O menu "👥 Equipe" vai aparecer!\n\n✅ Privilégios de admin ativados!');
+                    // Fechar modal
                     this.fecharModalAdmin();
+                    
+                    // Mostrar mensagem de sucesso
+                    alert('🎉 PARABÉNS!\n\nVocê agora é ADMINISTRADOR! 👑\n\nO menu "👥 Equipe" vai aparecer agora!\n\n✅ Privilégios de admin ativados!');
+                    
+                    // Recarregar dados e dashboard
+                    await this.carregarDados();
+                    this.renderDashboard();
                     
                 } catch (error) {
                     console.error('❌ Erro ao tornar admin:', error);
