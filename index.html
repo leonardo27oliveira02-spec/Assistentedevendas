@@ -197,6 +197,7 @@
             constructor() {
                 this.currentUser = null;
                 this.isAdmin = false;
+                this.currentPage = 'dashboard'; // dashboard, rotina, metricas, admin-geral, admin-consultor
                 this.periodo = null; // 'manha' ou 'tarde'
                 this.tarefas = [];
                 this.tarefaAtualIndex = 0;
@@ -211,6 +212,9 @@
                 this.timerLeadNovo = null;
                 this.ultimoLeadTimestamp = null;
                 this.autoSaveInterval = null;
+                this.metricasHistorico = [];
+                this.rankingConsultores = [];
+                this.consultorSelecionado = null;
                 
                 this.verificarSessao();
             }
@@ -247,6 +251,37 @@
                 
                 if (status) {
                     this.statusPlataformas = status;
+                }
+
+                // Carregar métricas históricas (últimos 7 dias)
+                await this.carregarMetricasHistorico();
+
+                // Se for admin, carregar ranking
+                if (this.isAdmin) {
+                    await this.carregarRankingConsultores();
+                }
+            }
+
+            async carregarMetricasHistorico() {
+                const { data, error } = await supabase
+                    .from('vw_metricas_diarias')
+                    .select('*')
+                    .eq('user_id', this.currentUser.id)
+                    .gte('data', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+                    .order('data', { ascending: false });
+
+                if (!error && data) {
+                    this.metricasHistorico = data;
+                }
+            }
+
+            async carregarRankingConsultores() {
+                const { data, error } = await supabase
+                    .from('vw_ranking_consultores')
+                    .select('*');
+
+                if (!error && data) {
+                    this.rankingConsultores = data;
                 }
             }
 
@@ -668,6 +703,23 @@
                             </div>
                         </div>
 
+                        <!-- Menu de Navegação -->
+                        <div class="bg-white shadow border-b">
+                            <div class="max-w-4xl mx-auto flex gap-2 px-4 py-3 overflow-x-auto">
+                                <button onclick="app.currentPage = 'dashboard'; app.renderDashboard();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-cm-turquesa text-white">
+                                    🏠 Início
+                                </button>
+                                <button onclick="app.renderMetricasIndividuais()" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300">
+                                    📊 Meu Desempenho
+                                </button>
+                                ${this.isAdmin ? `
+                                    <button onclick="app.renderDashboardAdminGeral()" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300">
+                                        👥 Equipe
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+
                         <div class="max-w-4xl mx-auto px-4 py-8">
                             <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
                                 <h2 class="text-3xl font-bold text-cm-escuro mb-4 text-center">
@@ -701,6 +753,7 @@
                                     <li>📊 Métricas em tempo real</li>
                                     <li>💾 Salvamento automático do progresso</li>
                                     <li>❌ Opção "Não deu tempo" com justificativa</li>
+                                    <li>📈 Acompanhe seu desempenho no menu acima</li>
                                 </ul>
                             </div>
                         </div>
@@ -1061,6 +1114,377 @@
                                     ✅ Finalizar e Voltar ao Início
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // ===== MÉTODOS DE DASHBOARD E MÉTRICAS =====
+
+            voltarDashboard() {
+                this.currentPage = 'dashboard';
+                this.renderDashboard();
+            }
+
+            async renderMetricasIndividuais() {
+                await this.carregarMetricasHistorico();
+                
+                const app = document.getElementById('app');
+                const nomeUsuario = this.currentUser.user_metadata?.nome || this.currentUser.email.split('@')[0];
+                const ultimos7Dias = this.metricasHistorico;
+                const mediaGeral = ultimos7Dias.length > 0 
+                    ? (ultimos7Dias.reduce((sum, m) => sum + parseFloat(m.taxa_conclusao), 0) / ultimos7Dias.length).toFixed(1)
+                    : 0;
+                
+                const totalLeads = ultimos7Dias.reduce((sum, m) => sum + parseInt(m.leads_atendidos || 0), 0);
+                const totalConcluidas = ultimos7Dias.reduce((sum, m) => sum + parseInt(m.concluidas), 0);
+                const totalNaoDeuTempo = ultimos7Dias.reduce((sum, m) => sum + parseInt(m.nao_deu_tempo), 0);
+
+                const dadosPorDia = {};
+                ultimos7Dias.forEach(m => {
+                    if (!dadosPorDia[m.data]) {
+                        dadosPorDia[m.data] = { manha: null, tarde: null };
+                    }
+                    dadosPorDia[m.data][m.periodo] = parseFloat(m.taxa_conclusao);
+                });
+
+                app.innerHTML = `
+                    <div class="min-h-screen bg-gray-50">
+                        <div class="bg-cm-escuro text-white shadow-lg">
+                            <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                <div>
+                                    <h1 class="text-xl font-bold">📊 Meu Desempenho</h1>
+                                    <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="app.voltarDashboard()" class="bg-cm-turquesa hover:opacity-90 px-4 py-2 rounded-lg text-sm">🏠 Voltar</button>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="max-w-6xl mx-auto px-4 py-8">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-cm-turquesa">
+                                    <p class="text-sm text-gray-600 mb-1">Média 7 Dias</p>
+                                    <p class="text-4xl font-bold text-cm-turquesa">${mediaGeral}%</p>
+                                    <p class="text-xs text-gray-500 mt-2">${ultimos7Dias.length} períodos</p>
+                                </div>
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-green-500">
+                                    <p class="text-sm text-gray-600 mb-1">Concluídas</p>
+                                    <p class="text-4xl font-bold text-green-600">${totalConcluidas}</p>
+                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                </div>
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-orange-500">
+                                    <p class="text-sm text-gray-600 mb-1">Não Deu Tempo</p>
+                                    <p class="text-4xl font-bold text-orange-600">${totalNaoDeuTempo}</p>
+                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                </div>
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-blue-500">
+                                    <p class="text-sm text-gray-600 mb-1">Leads Atendidos</p>
+                                    <p class="text-4xl font-bold text-blue-600">${totalLeads}</p>
+                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4">📈 Evolução Semanal</h3>
+                                <div class="space-y-3">
+                                    ${Object.keys(dadosPorDia).sort().reverse().map(data => {
+                                        const d = new Date(data + 'T00:00:00');
+                                        const diaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d.getDay()];
+                                        const dataFormatada = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                                        const manha = dadosPorDia[data].manha;
+                                        const tarde = dadosPorDia[data].tarde;
+                                        const media = ((manha || 0) + (tarde || 0)) / (manha && tarde ? 2 : 1);
+                                        
+                                        return `
+                                            <div>
+                                                <div class="flex justify-between items-center mb-1">
+                                                    <span class="text-sm font-semibold text-gray-700">${diaSemana} ${dataFormatada}</span>
+                                                    <span class="text-sm font-bold ${media >= 80 ? 'text-green-600' : media >= 60 ? 'text-orange-600' : 'text-red-600'}">${media.toFixed(0)}%</span>
+                                                </div>
+                                                <div class="flex gap-2">
+                                                    ${manha !== null ? `
+                                                        <div class="flex-1">
+                                                            <div class="w-full bg-gray-200 rounded-full h-6">
+                                                                <div class="bg-orange-400 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold" style="width: ${manha}%">
+                                                                    ${manha > 20 ? '🌅 ' + manha.toFixed(0) + '%' : ''}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ` : '<div class="flex-1 bg-gray-100 rounded h-6 flex items-center justify-center text-xs text-gray-400">-</div>'}
+                                                    ${tarde !== null ? `
+                                                        <div class="flex-1">
+                                                            <div class="w-full bg-gray-200 rounded-full h-6">
+                                                                <div class="bg-blue-500 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold" style="width: ${tarde}%">
+                                                                    ${tarde > 20 ? '🌆 ' + tarde.toFixed(0) + '%' : ''}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ` : '<div class="flex-1 bg-gray-100 rounded h-6 flex items-center justify-center text-xs text-gray-400">-</div>'}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4">⚠️ Tarefas que Mais Não Deram Tempo</h3>
+                                <div id="tarefasProblema">Carregando...</div>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+
+                this.carregarTarefasProblemaIndividual();
+            }
+
+            async carregarTarefasProblemaIndividual() {
+                const { data, error } = await supabase.rpc('get_top_tarefas_problema', {
+                    p_user_id: this.currentUser.id,
+                    p_limite: 5
+                });
+
+                const container = document.getElementById('tarefasProblema');
+                
+                if (error || !data || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-6xl mb-4">🎉</div>
+                            <p class="text-gray-600 font-semibold">Parabéns! Nenhuma tarefa com problemas recorrentes!</p>
+                            <p class="text-sm text-gray-500 mt-2">Continue assim!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.map((t, index) => `
+                    <div class="flex items-start gap-4 p-4 border-l-4 border-orange-500 bg-orange-50 rounded-lg mb-3">
+                        <div class="flex-shrink-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold">
+                            ${index + 1}
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-800">${t.tarefa}</p>
+                            <p class="text-sm text-gray-600 mt-1">
+                                <strong>Motivo mais comum:</strong> ${t.motivo_comum || 'Não especificado'}
+                            </p>
+                            <p class="text-xs text-orange-600 mt-1">
+                                ${t.ocorrencias} ${t.ocorrencias === 1 ? 'ocorrência' : 'ocorrências'} nos últimos 7 dias
+                            </p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            async renderDashboardAdminGeral() {
+                await this.carregarRankingConsultores();
+
+                const app = document.getElementById('app');
+                const mediaEquipe = this.rankingConsultores.length > 0
+                    ? (this.rankingConsultores.reduce((sum, c) => sum + parseFloat(c.media_conclusao), 0) / this.rankingConsultores.length).toFixed(1)
+                    : 0;
+
+                app.innerHTML = `
+                    <div class="min-h-screen bg-gray-50">
+                        <div class="bg-cm-escuro text-white shadow-lg">
+                            <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                <div>
+                                    <h1 class="text-xl font-bold">👥 Dashboard da Equipe</h1>
+                                    <p class="text-xs text-gray-300">Visão Geral</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="app.voltarDashboard()" class="bg-cm-turquesa hover:opacity-90 px-4 py-2 rounded-lg text-sm">🏠 Voltar</button>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="max-w-6xl mx-auto px-4 py-8">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-cm-turquesa">
+                                    <p class="text-sm text-gray-600 mb-1">Média da Equipe</p>
+                                    <p class="text-4xl font-bold text-cm-turquesa">${mediaEquipe}%</p>
+                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                </div>
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-green-500">
+                                    <p class="text-sm text-gray-600 mb-1">Total Consultores</p>
+                                    <p class="text-4xl font-bold text-green-600">${this.rankingConsultores.length}</p>
+                                    <p class="text-xs text-gray-500 mt-2">Ativos</p>
+                                </div>
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-blue-500">
+                                    <p class="text-sm text-gray-600 mb-1">Top Performer</p>
+                                    <p class="text-2xl font-bold text-blue-600">${this.rankingConsultores[0]?.consultor_nome || '-'}</p>
+                                    <p class="text-xs text-gray-500 mt-2">${this.rankingConsultores[0]?.media_conclusao || 0}% média</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4">🏆 Ranking de Consultores</h3>
+                                <div class="space-y-3">
+                                    ${this.rankingConsultores.map((consultor, index) => {
+                                        const posicao = index + 1;
+                                        const medalha = posicao === 1 ? '🥇' : posicao === 2 ? '🥈' : posicao === 3 ? '🥉' : `${posicao}º`;
+                                        const corBorda = consultor.media_conclusao >= 80 ? 'border-green-500' : 
+                                                       consultor.media_conclusao >= 60 ? 'border-orange-500' : 'border-red-500';
+                                        
+                                        return `
+                                            <div class="flex items-center gap-4 p-4 border-l-4 ${corBorda} bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition"
+                                                 onclick="app.verDetalhesConsultor('${consultor.user_id}')">
+                                                <div class="flex-shrink-0 w-12 text-center text-2xl">
+                                                    ${medalha}
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="font-bold text-gray-800">${consultor.consultor_nome}</p>
+                                                    <p class="text-xs text-gray-500">${consultor.consultor_email}</p>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="text-2xl font-bold ${consultor.media_conclusao >= 80 ? 'text-green-600' : consultor.media_conclusao >= 60 ? 'text-orange-600' : 'text-red-600'}">
+                                                        ${consultor.media_conclusao}%
+                                                    </p>
+                                                    <p class="text-xs text-gray-500">${consultor.total_leads} leads</p>
+                                                </div>
+                                                <div class="flex-shrink-0">
+                                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+            }
+
+            async verDetalhesConsultor(userId) {
+                this.consultorSelecionado = userId;
+                
+                const { data: metricas } = await supabase
+                    .from('vw_metricas_diarias')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .gte('data', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+                    .order('data', { ascending: false });
+
+                const { data: tarefasProblema } = await supabase.rpc('get_top_tarefas_problema', {
+                    p_user_id: userId,
+                    p_limite: 5
+                });
+
+                const consultor = this.rankingConsultores.find(c => c.user_id === userId);
+                if (!consultor) return;
+
+                const app = document.getElementById('app');
+
+                app.innerHTML = `
+                    <div class="min-h-screen bg-gray-50">
+                        <div class="bg-cm-escuro text-white shadow-lg">
+                            <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                <div>
+                                    <h1 class="text-xl font-bold">👤 ${consultor.consultor_nome}</h1>
+                                    <p class="text-xs text-gray-300">${consultor.consultor_email}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="app.renderDashboardAdminGeral()" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm">⬅️ Voltar</button>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="max-w-6xl mx-auto px-4 py-8">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-cm-turquesa">
+                                    <p class="text-sm text-gray-600 mb-1">Média 7 Dias</p>
+                                    <p class="text-4xl font-bold text-cm-turquesa">${consultor.media_conclusao}%</p>
+                                    <p class="text-xs text-gray-500 mt-2">${consultor.total_periodos} períodos</p>
+                                </div>
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-green-500">
+                                    <p class="text-sm text-gray-600 mb-1">Concluídas</p>
+                                    <p class="text-4xl font-bold text-green-600">${consultor.total_concluidas}</p>
+                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                </div>
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-orange-500">
+                                    <p class="text-sm text-gray-600 mb-1">Não Deu Tempo</p>
+                                    <p class="text-4xl font-bold text-orange-600">${consultor.total_nao_deu_tempo}</p>
+                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                </div>
+                                <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-blue-500">
+                                    <p class="text-sm text-gray-600 mb-1">Leads Atendidos</p>
+                                    <p class="text-4xl font-bold text-blue-600">${consultor.total_leads}</p>
+                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4">📅 Histórico Detalhado</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full">
+                                        <thead class="bg-gray-100">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Data</th>
+                                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Período</th>
+                                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Conclusão</th>
+                                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Concluídas</th>
+                                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Não Deram Tempo</th>
+                                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Leads</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200">
+                                            ${metricas.map(m => `
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-4 py-3 text-sm">${new Date(m.data).toLocaleDateString('pt-BR')}</td>
+                                                    <td class="px-4 py-3 text-sm">${m.periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde'}</td>
+                                                    <td class="px-4 py-3 text-sm text-right font-bold ${m.taxa_conclusao >= 80 ? 'text-green-600' : m.taxa_conclusao >= 60 ? 'text-orange-600' : 'text-red-600'}">
+                                                        ${m.taxa_conclusao}%
+                                                    </td>
+                                                    <td class="px-4 py-3 text-sm text-right">${m.concluidas}</td>
+                                                    <td class="px-4 py-3 text-sm text-right">${m.nao_deu_tempo}</td>
+                                                    <td class="px-4 py-3 text-sm text-right">${m.leads_atendidos}</td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4">⚠️ Tarefas com Dificuldade</h3>
+                                ${tarefasProblema && tarefasProblema.length > 0 ? `
+                                    <div class="space-y-3">
+                                        ${tarefasProblema.map((t, index) => `
+                                            <div class="flex items-start gap-4 p-4 border-l-4 border-orange-500 bg-orange-50 rounded-lg">
+                                                <div class="flex-shrink-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold">
+                                                    ${index + 1}
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="font-semibold text-gray-800">${t.tarefa}</p>
+                                                    <p class="text-sm text-gray-600 mt-1">
+                                                        <strong>Motivo:</strong> ${t.motivo_comum || 'Não especificado'}
+                                                    </p>
+                                                    <p class="text-xs text-orange-600 mt-1">
+                                                        ${t.ocorrencias} ${t.ocorrencias === 1 ? 'vez' : 'vezes'} nos últimos 7 dias
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : `
+                                    <div class="text-center py-8">
+                                        <div class="text-6xl mb-4">🎉</div>
+                                        <p class="text-gray-600 font-semibold">Sem problemas recorrentes!</p>
+                                    </div>
+                                `}
+                            </div>
+
                         </div>
                     </div>
                 `;
