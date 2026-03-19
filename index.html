@@ -658,6 +658,11 @@
                                 <input type="email" id="loginEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <input type="password" id="loginSenha" placeholder="Senha" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <button onclick="app.fazerLogin()" class="w-full btn-primary">Entrar</button>
+                                
+                                <!-- BOTÃO SECRETO ADMIN -->
+                                <button onclick="app.abrirModalAdmin()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg mt-3 text-sm transition">
+                                    👑 Modo Admin
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1488,6 +1493,106 @@
                         </div>
                     </div>
                 `;
+            }
+
+            // ===== MÉTODOS BOTÃO SECRETO ADMIN =====
+
+            abrirModalAdmin() {
+                const modal = document.createElement('div');
+                modal.id = 'modalAdmin';
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
+                        <h2 class="text-2xl font-bold text-purple-600 mb-2">👑 Ativar Modo Admin</h2>
+                        <p class="text-gray-600 mb-6 text-sm">Digite a senha secreta para se tornar administrador:</p>
+                        
+                        <input 
+                            type="password" 
+                            id="senhaAdmin" 
+                            placeholder="Senha secreta"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-6 focus:outline-none focus:border-purple-500 text-lg font-mono text-center"
+                            maxlength="20"
+                        />
+                        
+                        <div class="flex gap-3">
+                            <button onclick="app.fecharModalAdmin()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-3 px-6 rounded-lg transition">
+                                ❌ Cancelar
+                            </button>
+                            <button onclick="app.confirmarAdmin()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition">
+                                ✅ Confirmar
+                            </button>
+                        </div>
+                        
+                        <p class="text-xs text-gray-400 text-center mt-4">
+                            💡 Você precisa estar logado para ativar o modo admin
+                        </p>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Focar no input
+                setTimeout(() => {
+                    const input = document.getElementById('senhaAdmin');
+                    if (input) input.focus();
+                }, 100);
+                
+                // Permitir Enter para confirmar
+                const senhaInput = document.getElementById('senhaAdmin');
+                if (senhaInput) {
+                    senhaInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') this.confirmarAdmin();
+                    });
+                }
+            }
+
+            fecharModalAdmin() {
+                const modal = document.getElementById('modalAdmin');
+                if (modal) modal.remove();
+            }
+
+            async confirmarAdmin() {
+                const senhaInput = document.getElementById('senhaAdmin');
+                if (!senhaInput) return;
+                
+                const senhaDigitada = senhaInput.value.trim();
+                const SENHA_ADMIN = '071727'; // 👈 MUDE ESTA SENHA AQUI SE QUISER!
+                
+                if (senhaDigitada !== SENHA_ADMIN) {
+                    alert('❌ Senha incorreta!\n\nTente novamente.');
+                    senhaInput.value = '';
+                    senhaInput.focus();
+                    return;
+                }
+                
+                if (!this.currentUser) {
+                    alert('⚠️ Você precisa fazer LOGIN primeiro!\n\nFaça login e depois clique em "Modo Admin".');
+                    this.fecharModalAdmin();
+                    return;
+                }
+                
+                try {
+                    // Inserir ou atualizar role de admin
+                    const { error } = await supabase
+                        .from('user_roles')
+                        .upsert({ 
+                            user_id: this.currentUser.id, 
+                            is_admin: true 
+                        }, {
+                            onConflict: 'user_id'
+                        });
+                    
+                    if (error) throw error;
+                    
+                    // Atualizar flag local
+                    this.isAdmin = true;
+                    
+                    alert('🎉 PARABÉNS!\n\nVocê agora é ADMINISTRADOR! 👑\n\n📍 Próximos passos:\n1. Faça LOGOUT\n2. Faça LOGIN novamente\n3. O menu "👥 Equipe" vai aparecer!\n\n✅ Privilégios de admin ativados!');
+                    this.fecharModalAdmin();
+                    
+                } catch (error) {
+                    console.error('❌ Erro ao tornar admin:', error);
+                    alert('❌ ERRO ao ativar modo admin!\n\nDetalhes: ' + error.message + '\n\nAbra o console (F12) para mais informações.');
+                }
             }
         }
 
