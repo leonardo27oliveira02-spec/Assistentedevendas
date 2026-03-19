@@ -427,6 +427,30 @@
                 await this.proximaTarefa();
             }
 
+            refazerTarefa() {
+                const tarefa = this.tarefas[this.tarefaAtualIndex];
+                
+                if (tarefa.status === 'nao_deu_tempo') {
+                    // Resetar tarefa
+                    tarefa.status = 'pendente';
+                    tarefa.motivo_nao_concluida = null;
+                    tarefa.horario_conclusao = null;
+                    
+                    // Decrementar métrica
+                    this.metricas.nao_deu_tempo--;
+                    
+                    // Re-renderizar
+                    this.renderTarefaAtual();
+                }
+            }
+
+            async irParaTarefa(index) {
+                // Permitir navegar para qualquer tarefa
+                this.tarefaAtualIndex = index;
+                await this.salvarProgresso();
+                this.renderTarefaAtual();
+            }
+
             async proximaTarefa() {
                 if (this.tarefaAtualIndex < this.tarefas.length - 1) {
                     this.tarefaAtualIndex++;
@@ -692,10 +716,22 @@
                 const progresso = this.calcularProgresso();
                 const periodoTexto = this.periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde';
 
-                // Definir cor baseado no tipo
+                // Verificar status da tarefa
+                const estaConcluida = tarefa.status === 'concluida';
+                const naoDeuTempo = tarefa.status === 'nao_deu_tempo';
+                const estaPendente = tarefa.status === 'pendente';
+
+                // Definir cor baseado no tipo e status
                 let corTipo = 'bg-blue-500';
-                if (tarefa.tipo === 'prioritaria') corTipo = 'bg-red-500';
-                if (tarefa.tipo === 'verificacao') corTipo = 'bg-green-500';
+                if (estaConcluida) {
+                    corTipo = 'bg-green-500';
+                } else if (naoDeuTempo) {
+                    corTipo = 'bg-orange-500';
+                } else if (tarefa.tipo === 'prioritaria') {
+                    corTipo = 'bg-red-500';
+                } else if (tarefa.tipo === 'verificacao') {
+                    corTipo = 'bg-green-500';
+                }
 
                 app.innerHTML = `
                     <div class="min-h-screen bg-gray-50">
@@ -733,16 +769,77 @@
 
                         <!-- Conteúdo Principal -->
                         <div class="max-w-6xl mx-auto px-4 py-8 pr-[320px]">
+                            
+                            <!-- Mapa de Progresso -->
+                            <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
+                                <h3 class="text-sm font-bold text-gray-700 mb-3">Mapa de Tarefas:</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    ${this.tarefas.map((t, index) => {
+                                        let corIndicador = 'bg-gray-300'; // Pendente
+                                        let iconeStatus = '';
+                                        
+                                        if (t.status === 'concluida') {
+                                            corIndicador = 'bg-green-500';
+                                            iconeStatus = '✓';
+                                        } else if (t.status === 'nao_deu_tempo') {
+                                            corIndicador = 'bg-orange-400';
+                                            iconeStatus = '⚠';
+                                        }
+                                        
+                                        const estaAtual = index === this.tarefaAtualIndex;
+                                        
+                                        return `
+                                            <button 
+                                                onclick="app.irParaTarefa(${index})"
+                                                class="${corIndicador} ${estaAtual ? 'ring-4 ring-blue-500 scale-110' : ''} w-10 h-10 rounded-lg text-white font-bold text-xs flex items-center justify-center transition-all hover:scale-110"
+                                                title="${t.texto}"
+                                            >
+                                                ${iconeStatus || (index + 1)}
+                                            </button>
+                                        `;
+                                    }).join('')}
+                                </div>
+                                <div class="flex gap-4 mt-3 text-xs text-gray-600">
+                                    <span class="flex items-center gap-1">
+                                        <div class="w-3 h-3 bg-green-500 rounded"></div>
+                                        Concluída
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <div class="w-3 h-3 bg-orange-400 rounded"></div>
+                                        Não deu tempo
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <div class="w-3 h-3 bg-gray-300 rounded"></div>
+                                        Pendente
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <div class="w-3 h-3 bg-blue-500 rounded ring-2 ring-blue-500"></div>
+                                        Atual
+                                    </span>
+                                </div>
+                            </div>
+
                             <!-- Card da Tarefa -->
                             <div class="tarefa-card bg-white rounded-lg shadow-2xl overflow-hidden slide-in">
                                 <!-- Cabeçalho da Tarefa -->
                                 <div class="${corTipo} text-white p-6">
                                     <div class="flex items-center gap-3 mb-2">
                                         <span class="text-4xl">${tarefa.icone}</span>
-                                        <div>
+                                        <div class="flex-1">
                                             <p class="text-sm opacity-90">${tarefa.categoria.toUpperCase()}</p>
-                                            <h2 class="text-2xl font-bold">${tarefa.tipo === 'prioritaria' ? '🔴 PRIORIDADE' : tarefa.tipo === 'verificacao' ? '✅ VERIFICAÇÃO' : '📋 TAREFA'}</h2>
+                                            <h2 class="text-2xl font-bold">
+                                                ${estaConcluida ? '✅ CONCLUÍDA' : 
+                                                  naoDeuTempo ? '⚠️ NÃO DEU TEMPO' : 
+                                                  tarefa.tipo === 'prioritaria' ? '🔴 PRIORIDADE' : 
+                                                  tarefa.tipo === 'verificacao' ? '✅ VERIFICAÇÃO' : '📋 TAREFA'}
+                                            </h2>
                                         </div>
+                                        ${estaConcluida ? `
+                                            <div class="text-right">
+                                                <p class="text-xs opacity-75">Concluída em:</p>
+                                                <p class="text-sm font-bold">${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</p>
+                                            </div>
+                                        ` : ''}
                                     </div>
                                 </div>
 
@@ -768,7 +865,8 @@
                                                 min="0"
                                                 value="${tarefa.contador_valor || 0}"
                                                 onchange="app.atualizarContador(this.value)"
-                                                class="w-full px-4 py-3 text-2xl font-bold text-center border-2 border-cm-turquesa rounded-lg focus:outline-none focus:ring-2 focus:ring-cm-turquesa"
+                                                ${estaConcluida ? 'disabled' : ''}
+                                                class="w-full px-4 py-3 text-2xl font-bold text-center border-2 ${estaConcluida ? 'bg-gray-100 border-gray-300 cursor-not-allowed' : 'border-cm-turquesa'} rounded-lg focus:outline-none focus:ring-2 focus:ring-cm-turquesa"
                                                 placeholder="0"
                                             />
                                             <p class="text-xs text-gray-500 mt-2 text-center">
@@ -787,15 +885,55 @@
                                     ` : ''}
 
                                     <!-- Botões de Ação -->
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                                        <button onclick="app.concluirTarefa()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
-                                            <span class="text-2xl">✅</span>
-                                            <span>CONCLUÍDA</span>
-                                        </button>
-                                        <button onclick="app.abrirModalNaoDeuTempo()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
-                                            <span class="text-2xl">❌</span>
-                                            <span>NÃO DEU TEMPO</span>
-                                        </button>
+                                    <div class="mt-8">
+                                        ${estaConcluida ? `
+                                            <!-- Tarefa CONCLUÍDA - Bloqueada -->
+                                            <div class="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
+                                                <div class="text-6xl mb-4">✅</div>
+                                                <h3 class="text-2xl font-bold text-green-700 mb-2">Tarefa Concluída!</h3>
+                                                <p class="text-green-600">
+                                                    Finalizada em ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
+                                                </p>
+                                                ${tarefa.contador_valor > 0 ? `
+                                                    <div class="mt-4 bg-white rounded-lg p-4 inline-block">
+                                                        <p class="text-sm text-gray-600">Contador registrado:</p>
+                                                        <p class="text-3xl font-bold text-green-600">${tarefa.contador_valor}</p>
+                                                    </div>
+                                                ` : ''}
+                                                <p class="text-xs text-gray-500 mt-4">Esta tarefa está bloqueada e não pode ser alterada</p>
+                                            </div>
+                                        ` : naoDeuTempo ? `
+                                            <!-- Tarefa NÃO DEU TEMPO - Pode refazer -->
+                                            <div class="bg-orange-50 border-2 border-orange-500 rounded-lg p-6 mb-4">
+                                                <div class="text-center mb-4">
+                                                    <div class="text-5xl mb-3">⚠️</div>
+                                                    <h3 class="text-xl font-bold text-orange-700 mb-2">Esta tarefa não foi concluída</h3>
+                                                    <p class="text-orange-600 mb-1"><strong>Motivo:</strong> ${tarefa.motivo_nao_concluida}</p>
+                                                    <p class="text-xs text-gray-600">Marcada às ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</p>
+                                                </div>
+                                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-4">
+                                                    <p class="text-sm text-yellow-800">
+                                                        💡 <strong>Sobrou tempo agora?</strong> Você pode refazer esta tarefa!
+                                                    </p>
+                                                </div>
+                                                <button onclick="app.refazerTarefa()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
+                                                    <span class="text-2xl">🔄</span>
+                                                    <span>REFAZER AGORA</span>
+                                                </button>
+                                            </div>
+                                        ` : `
+                                            <!-- Tarefa PENDENTE - Botões normais -->
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <button onclick="app.concluirTarefa()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
+                                                    <span class="text-2xl">✅</span>
+                                                    <span>CONCLUÍDA</span>
+                                                </button>
+                                                <button onclick="app.abrirModalNaoDeuTempo()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
+                                                    <span class="text-2xl">❌</span>
+                                                    <span>NÃO DEU TEMPO</span>
+                                                </button>
+                                            </div>
+                                        `}
                                     </div>
 
                                     <!-- Navegação -->
