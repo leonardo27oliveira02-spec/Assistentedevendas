@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C&M - Controle de Consultor v2.2</title>
+    <title>C&M - Rotina Sequencial v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -15,103 +13,171 @@
             --cor-turquesa: #4ECDC4;
             --cor-escuro: #2C5F5D;
         }
+        
         .bg-cm-escuro { background-color: var(--cor-escuro); }
         .bg-cm-laranja { background-color: var(--cor-laranja); }
         .bg-cm-verde { background-color: var(--cor-verde); }
         .bg-cm-turquesa { background-color: var(--cor-turquesa); }
         .text-cm-escuro { color: var(--cor-escuro); }
-        .btn-cm { background: linear-gradient(135deg, var(--cor-laranja), var(--cor-verde), var(--cor-turquesa)); }
-        .btn-cm:hover { opacity: 0.9; }
-        .loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; }
-        .loading.active { display: block; }
-        .checkbox-tarefa {
-            width: 24px;
-            height: 24px;
-            cursor: pointer;
-            accent-color: #4ECDC4;
+        .text-cm-laranja { color: var(--cor-laranja); }
+        
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-        .badge-agora {
-            animation: pulse 2s infinite;
-        }
+        
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        .modal { 
-            display: none; 
-            position: fixed; 
-            z-index: 50; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            height: 100%; 
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
             background-color: rgba(0,0,0,0.5);
             overflow-y: auto;
         }
-        .modal.active { 
-            display: flex; 
-            align-items: center; 
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
             justify-content: center;
             padding: 20px;
         }
+        
         .modal-content {
             background: white;
             border-radius: 12px;
-            max-width: 800px;
+            max-width: 500px;
             width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
-        .dragging {
-            opacity: 0.5;
+        
+        .timer-warning {
+            animation: blink 1s infinite;
         }
-        .drag-over {
-            border-top: 3px solid #4ECDC4;
+        
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.5; }
         }
-        .password-hidden {
-            filter: blur(5px);
-            user-select: none;
+        
+        .progress-bar {
+            transition: width 0.5s ease;
         }
-        .password-visible {
-            filter: none;
+        
+        .tarefa-card {
+            min-height: 400px;
+        }
+        
+        .regra-item {
+            border-left: 4px solid var(--cor-turquesa);
+        }
+        
+        .sidebar-regras {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            width: 300px;
+            background: white;
+            box-shadow: -4px 0 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 40;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar-regras {
+                display: none;
+            }
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--cor-laranja), var(--cor-turquesa));
+            color: white;
+            font-weight: bold;
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: opacity 0.2s;
+        }
+        
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-secondary {
+            background: #6B7280;
+            color: white;
+            font-weight: bold;
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #4B5563;
+        }
+        
+        .btn-danger {
+            background: #EF4444;
+            color: white;
+            font-weight: bold;
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        
+        .btn-danger:hover {
+            background: #DC2626;
         }
     </style>
 </head>
 <body class="bg-gray-50">
-    <div id="loading" class="loading">
-        <div class="bg-white p-8 rounded-lg shadow-2xl flex flex-col items-center">
-            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-cm-turquesa border-solid"></div>
-            <p class="mt-4 text-cm-escuro font-semibold">Carregando...</p>
-        </div>
-    </div>
-
-    <!-- Modal de Edição de Rotina -->
-    <div id="modalEditarRotina" class="modal">
+    
+    <!-- Modal "Não Deu Tempo" -->
+    <div id="modalNaoDeuTempo" class="modal">
         <div class="modal-content">
             <div class="bg-cm-escuro text-white p-6 rounded-t-xl">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-2xl font-bold" id="tituloModal">Editar Rotina</h2>
-                    <button onclick="app.fecharModalRotina()" class="text-white hover:text-gray-300 text-3xl">&times;</button>
-                </div>
+                <h2 class="text-xl font-bold">❌ Por que não deu tempo?</h2>
             </div>
             <div class="p-6">
-                <div id="conteudoModalRotina"></div>
+                <div id="conteudoModalNaoDeuTempo"></div>
             </div>
         </div>
     </div>
-
-    <!-- Modal de Resetar Senha -->
-    <div id="modalResetarSenha" class="modal">
-        <div class="modal-content max-w-md">
+    
+    <!-- Modal de Pausa -->
+    <div id="modalPausa" class="modal">
+        <div class="modal-content">
             <div class="bg-cm-escuro text-white p-6 rounded-t-xl">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-xl font-bold">🔑 Resetar Senha</h2>
-                    <button onclick="app.fecharModalSenha()" class="text-white hover:text-gray-300 text-3xl">&times;</button>
-                </div>
+                <h2 class="text-xl font-bold">⏸️ Pausar Rotina</h2>
             </div>
             <div class="p-6">
-                <div id="conteudoModalSenha"></div>
+                <p class="text-gray-700 mb-4">Deseja pausar a rotina? Você pode continuar de onde parou.</p>
+                <div class="flex gap-3">
+                    <button onclick="app.confirmarPausa()" class="flex-1 btn-danger">Pausar</button>
+                    <button onclick="app.fecharModalPausa()" class="flex-1 btn-secondary">Cancelar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -121,931 +187,391 @@
     <script>
         const SUPABASE_URL = 'https://awppfluuudipkgrtrgyw.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cHBmbHV1dWRpcGtncnRyZ3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4MTk5MDYsImV4cCI6MjA4NTM5NTkwNn0.L7EjW4ytXMbVlGxhsMb8Hh77cjRpPr5Y-KG0dR4e35A';
-        const SENHA_ADMIN = '071727';
         
         if (!window.__cmSupabaseClient) {
             window.__cmSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
         var supabase = window.__cmSupabaseClient;
 
-        class ControlConsultor {
+        class RotinaSequencial {
             constructor() {
                 this.currentUser = null;
                 this.isAdmin = false;
-                this.currentPage = 'rotina';
-                this.historicoDesempenho = [];
-                this.rotinaTrabalho = [];
-                this.rotinasSemana = {};
-                this.diaAtual = new Date().getDay();
-                this.intervaloNotificacao = null;
-                this.ultimaNotificacao = null;
-                this.editandoDia = null;
-                this.blocosEditando = [];
-                this.listaUsuarios = [];
-                this.senhasVisiveis = {}; // Armazena senhas temporárias {user_id: senha}
-                this.usuarioEditandoSenha = null;
+                this.periodo = null; // 'manha' ou 'tarde'
+                this.tarefas = [];
+                this.tarefaAtualIndex = 0;
+                this.regras = [];
+                this.statusPlataformas = { whatsapp_ok: false, ll_ok: false, rotina_ok: true };
+                this.metricas = {
+                    total_tarefas: 0,
+                    concluidas: 0,
+                    nao_deu_tempo: 0,
+                    leads_atendidos: 0
+                };
+                this.timerLeadNovo = null;
+                this.ultimoLeadTimestamp = null;
+                this.autoSaveInterval = null;
                 
-                this.solicitarPermissaoNotificacao();
                 this.verificarSessao();
-                  this.progressoDiario = null; // NOVO
-    this.autoSaveTimeout = null; // NOVO
-            }
-async salvarProgressoAutomatico() {
-    const hoje = this.getDataAtual();
-    const progresso = {
-        blocos: this.rotinaTrabalho.map(bloco => ({
-            id: bloco.id,
-            etiqueta: bloco.etiqueta,
-            tarefas: bloco.tarefas.map(t => ({
-                id: t.id,
-                texto: t.texto,
-                completo: t.completo,
-                comentarios: t.comentarios || [],
-                metricas: t.metricas || null
-            }))
-        }))
-    };
-    
-    await supabase
-        .from('progresso_diario')
-        .upsert({
-            user_id: this.currentUser.id,
-            data: hoje,
-            dia_semana: this.diaAtual,
-            progresso: progresso,
-            updated_at: new Date().toISOString()
-        });
-}
-            async solicitarPermissaoNotificacao() {
-                if ('Notification' in window && Notification.permission === 'default') {
-                    await Notification.requestPermission();
-                }
             }
 
             async verificarSessao() {
-                this.showLoading();
                 const { data: { session } } = await supabase.auth.getSession();
-                
                 if (session) {
                     this.currentUser = session.user;
-                    await this.verificarAdmin();
                     await this.carregarDados();
-                    this.iniciarVerificacaoHorario();
-                    this.render();
+                    this.iniciarAutoSave();
+                    this.renderDashboard();
                 } else {
                     this.renderLogin();
                 }
-                this.hideLoading();
-            }
-
-            async verificarAdmin() {
-                const { data } = await supabase
-                    .from('user_roles')
-                    .select('is_admin')
-                    .eq('user_id', this.currentUser.id)
-                    .single();
-                
-                this.isAdmin = data?.is_admin || false;
-            }
-
-            async virarAdmin(senha) {
-                if (senha !== SENHA_ADMIN) {
-                    alert('❌ Senha incorreta!');
-                    return;
-                }
-
-                this.showLoading();
-
-                const { data, error } = await supabase
-                    .from('user_roles')
-                    .upsert({
-                        user_id: this.currentUser.id,
-                        is_admin: true
-                    })
-                    .select();
-
-                if (!error) {
-                    await supabase.rpc('criar_rotinas_padrao_semana');
-                    
-                    this.isAdmin = true;
-                    alert('✅ Você agora é Admin! Recarregando...');
-                    await this.carregarDados();
-                    this.render();
-                }
-
-                this.hideLoading();
-            }
-
-            iniciarVerificacaoHorario() {
-                if (this.intervaloNotificacao) {
-                    clearInterval(this.intervaloNotificacao);
-                }
-
-                this.intervaloNotificacao = setInterval(() => {
-                    this.verificarHorarioTarefa();
-                }, 60000);
-
-                this.verificarHorarioTarefa();
-            }
-
-            verificarHorarioTarefa() {
-                if (!this.rotinaTrabalho || this.rotinaTrabalho.length === 0) return;
-                
-                const agora = new Date();
-                const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
-                
-                this.rotinaTrabalho.forEach(bloco => {
-                    if (bloco.horario_inicio === horaAtual) {
-                        const chave = `${bloco.horario_inicio}-${bloco.etiqueta}`;
-                        
-                        if (this.ultimaNotificacao !== chave) {
-                            this.mostrarNotificacao(bloco);
-                            this.ultimaNotificacao = chave;
-                        }
-                    }
-                });
-            }
-
-            mostrarNotificacao(bloco) {
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    const tarefasTexto = bloco.tarefas.slice(0, 2).map(t => `• ${t.texto}`).join('\n');
-                    
-                    new Notification(`⏰ ${bloco.horario} - ${bloco.etiqueta}`, {
-                        body: `Hora de começar!\n\n${tarefasTexto}`,
-                        icon: '/favicon.ico',
-                        tag: bloco.horario_inicio
-                    });
-                }
-            }
-
-            getDiaSemanaTexto(dia) {
-                const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-                return dias[dia];
-            }
-
-            showLoading() {
-                document.getElementById('loading').classList.add('active');
-            }
-
-            hideLoading() {
-                document.getElementById('loading').classList.remove('active');
-            }
-
-            getDataAtual() {
-                return new Date().toISOString().split('T')[0];
-            }
-
-            getDataMesAtual() {
-                const hoje = new Date();
-                return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
             }
 
             async carregarDados() {
-                this.showLoading();
-                
-                const { data: rotinasSemana } = await supabase
-                    .from('rotinas_semanais')
+                // Carregar regras
+                const { data: regras } = await supabase
+                    .from('regras_lembretes')
                     .select('*')
-                    .order('dia_semana', { ascending: true })
-                    .order('ordem', { ascending: true });
-                
-                if (rotinasSemana) {
-                    this.rotinasSemana = {};
-                    rotinasSemana.forEach(r => {
-                        if (!this.rotinasSemana[r.dia_semana]) {
-                            this.rotinasSemana[r.dia_semana] = [];
-                        }
-                        this.rotinasSemana[r.dia_semana].push(r);
-                    });
-                }
+                    .eq('sempre_visivel', true)
+                    .order('ordem');
+                this.regras = regras || [];
 
-                this.carregarRotinaDoDia();
-
-                const { data: historico } = await supabase
-                    .from('historico_desempenho')
+                // Carregar status plataformas
+                const hoje = new Date().toISOString().split('T')[0];
+                const { data: status } = await supabase
+                    .from('status_plataformas')
                     .select('*')
                     .eq('user_id', this.currentUser.id)
-                    .order('data', { ascending: false });
-                this.historicoDesempenho = historico || [];
-
-                // Carregar lista de usuários se for admin
-                if (this.isAdmin) {
-                    await this.carregarUsuarios();
+                    .eq('data', hoje)
+                    .single();
+                
+                if (status) {
+                    this.statusPlataformas = status;
                 }
-
-                this.hideLoading();
             }
 
-            async carregarUsuarios() {
-                try {
-                    // Buscar roles
-                    const { data: roles } = await supabase
-                        .from('user_roles')
-                        .select('*');
+            async iniciarRotina(periodo) {
+                this.periodo = periodo;
+                
+                // Carregar templates de tarefas
+                const { data: templates } = await supabase
+                    .from('rotina_templates')
+                    .select('*')
+                    .eq('periodo', periodo)
+                    .order('ordem');
+                
+                if (!templates || templates.length === 0) {
+                    alert('❌ Nenhuma tarefa encontrada para este período!');
+                    return;
+                }
 
-                    // Buscar histórico para pegar todos os user_ids
-                    const { data: historicos } = await supabase
-                        .from('historico_desempenho')
-                        .select('user_id')
-                        .order('created_at', { ascending: false });
+                // Verificar se já existe progresso salvo
+                const hoje = new Date().toISOString().split('T')[0];
+                const { data: progressoSalvo } = await supabase
+                    .from('progresso_diario')
+                    .select('*')
+                    .eq('user_id', this.currentUser.id)
+                    .eq('data', hoje)
+                    .eq('periodo', periodo)
+                    .single();
 
-                    // Criar conjunto único de user_ids
-                    const userIds = new Set();
-                    
-                    if (roles) {
-                        roles.forEach(r => userIds.add(r.user_id));
-                    }
-                    
-                    if (historicos) {
-                        historicos.forEach(h => userIds.add(h.user_id));
-                    }
+                if (progressoSalvo && progressoSalvo.status === 'em_andamento') {
+                    // Continuar de onde parou
+                    this.tarefas = progressoSalvo.progresso.tarefas;
+                    this.tarefaAtualIndex = progressoSalvo.tarefa_atual_index;
+                    this.metricas = progressoSalvo.metricas;
+                } else {
+                    // Iniciar nova rotina
+                    this.tarefas = templates.map((t, index) => ({
+                        ...t,
+                        index: index,
+                        status: 'pendente', // pendente, concluida, nao_deu_tempo
+                        motivo_nao_concluida: null,
+                        horario_conclusao: null,
+                        contador_valor: 0
+                    }));
+                    this.tarefaAtualIndex = 0;
+                    this.metricas = {
+                        total_tarefas: this.tarefas.length,
+                        concluidas: 0,
+                        nao_deu_tempo: 0,
+                        leads_atendidos: 0
+                    };
 
-                    // Sempre incluir o usuário atual
-                    userIds.add(this.currentUser.id);
-
-                    // Criar lista de usuários
-                    this.listaUsuarios = Array.from(userIds).map(userId => {
-                        const role = roles?.find(r => r.user_id === userId);
-                        const isCurrentUser = userId === this.currentUser.id;
-                        
-                        return {
-                            user_id: userId,
-                            email: isCurrentUser ? this.currentUser.email : `${userId.substring(0, 12)}...`,
-                            nome: isCurrentUser ? (this.currentUser.user_metadata?.nome || 'Você') : `Usuário ${userId.substring(0, 8)}`,
-                            is_admin: role?.is_admin || false,
-                            senha_original: this.senhasVisiveis[userId] || null,
-                            created_at: new Date().toISOString()
-                        };
+                    // Salvar início
+                    await supabase.from('progresso_diario').insert({
+                        user_id: this.currentUser.id,
+                        data: hoje,
+                        periodo: periodo,
+                        tarefa_atual_index: 0,
+                        progresso: { tarefas: this.tarefas },
+                        metricas: this.metricas,
+                        status: 'em_andamento',
+                        iniciado_em: new Date().toISOString()
                     });
-
-                    console.log(`✅ ${this.listaUsuarios.length} usuários carregados`);
-                } catch (error) {
-                    console.error('Erro ao carregar usuários:', error);
-                    this.listaUsuarios = [];
                 }
-            }
-async carregarRotinaDoDia() {
-    const rotinasDia = this.rotinasSemana[this.diaAtual] || [];
-    const hoje = this.getDataAtual();
-    
-    // Tentar carregar progresso salvo
-    const { data: progressoSalvo } = await supabase
-        .from('progresso_diario')
-        .select('progresso')
-        .eq('user_id', this.currentUser.id)
-        .eq('data', hoje)
-        .single();
-    
-    this.rotinaTrabalho = rotinasDia.map(r => {
-        const blocoSalvo = progressoSalvo?.progresso?.blocos?.find(b => b.id === r.id);
-        
-        return {
-            id: r.id,
-            horario: r.horario,
-            horario_inicio: r.horario_inicio,
-            etiqueta: r.etiqueta,
-            cor: r.cor,
-            tarefas: r.tarefas.map((tarefa, idx) => {
-                const tarefaSalva = blocoSalvo?.tarefas?.find(t => t.id === idx);
-                return {
-                    texto: tarefa,
-                    completo: tarefaSalva?.completo || false,
-                    comentarios: tarefaSalva?.comentarios || [],
-                    metricas: tarefaSalva?.metricas || null,
-                    id: idx
-                };
-            })
-        };
-    });
-}
 
-            async registrarUsuario(nome, email, senha) {
-                this.showLoading();
+                this.renderTarefaAtual();
+            }
+
+            async concluirTarefa() {
+                const tarefa = this.tarefas[this.tarefaAtualIndex];
+                tarefa.status = 'concluida';
+                tarefa.horario_conclusao = new Date().toISOString();
                 
-                const { data, error } = await supabase.auth.signUp({
-                    email: email,
-                    password: senha,
-                    options: {
-                        data: { nome: nome }
+                this.metricas.concluidas++;
+                
+                await this.salvarProgresso();
+                await this.proximaTarefa();
+            }
+
+            abrirModalNaoDeuTempo() {
+                this.renderModalNaoDeuTempo();
+                document.getElementById('modalNaoDeuTempo').classList.add('active');
+            }
+
+            fecharModalNaoDeuTempo() {
+                document.getElementById('modalNaoDeuTempo').classList.remove('active');
+            }
+
+            renderModalNaoDeuTempo() {
+                const conteudo = document.getElementById('conteudoModalNaoDeuTempo');
+                conteudo.innerHTML = `
+                    <div class="space-y-4">
+                        <p class="text-gray-700 font-semibold">Selecione o motivo:</p>
+                        
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="radio" name="motivo" value="Muitos atendimentos" class="w-5 h-5">
+                                <span>😰 Muitos atendimentos</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="radio" name="motivo" value="Problema técnico" class="w-5 h-5">
+                                <span>🔧 Problema técnico</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="radio" name="motivo" value="Reunião não prevista" class="w-5 h-5">
+                                <span>📅 Reunião não prevista</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="radio" name="motivo" value="Falta de tempo" class="w-5 h-5">
+                                <span>⏰ Falta de tempo</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="radio" name="motivo" value="outro" class="w-5 h-5">
+                                <span>✏️ Outro (especificar)</span>
+                            </label>
+                        </div>
+
+                        <div id="outroMotivoContainer" style="display: none;">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">📝 Detalhe o motivo:</label>
+                            <textarea 
+                                id="outroMotivoTexto" 
+                                rows="3"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa"
+                                placeholder="Digite o motivo específico..."></textarea>
+                        </div>
+
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="app.confirmarNaoDeuTempo()" class="flex-1 btn-danger">
+                                Confirmar e Avançar
+                            </button>
+                            <button onclick="app.fecharModalNaoDeuTempo()" class="flex-1 btn-secondary">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                // Listener para mostrar campo "outro"
+                document.querySelectorAll('input[name="motivo"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        const container = document.getElementById('outroMotivoContainer');
+                        if (e.target.value === 'outro') {
+                            container.style.display = 'block';
+                        } else {
+                            container.style.display = 'none';
+                        }
+                    });
+                });
+            }
+
+            async confirmarNaoDeuTempo() {
+                const motivoSelecionado = document.querySelector('input[name="motivo"]:checked');
+                
+                if (!motivoSelecionado) {
+                    alert('❌ Selecione um motivo!');
+                    return;
+                }
+
+                let motivo = motivoSelecionado.value;
+                
+                if (motivo === 'outro') {
+                    const outroTexto = document.getElementById('outroMotivoTexto').value.trim();
+                    if (!outroTexto) {
+                        alert('❌ Digite o motivo específico!');
+                        return;
                     }
-                });
-
-                if (!error && data.user) {
-                    // Salvar credenciais na tabela personalizada
-                    await supabase
-                        .from('user_credentials')
-                        .insert({
-                            user_id: data.user.id,
-                            email: email,
-                            nome: nome,
-                            senha_original: senha // Armazenar senha para admin poder recuperar
-                        });
+                    motivo = outroTexto;
                 }
 
-                this.hideLoading();
-
-                if (error) {
-                    alert('Erro ao criar conta: ' + error.message);
-                    return;
-                }
-
-                alert('✅ Conta criada! Você já pode fazer login.');
-                this.renderLogin();
+                const tarefa = this.tarefas[this.tarefaAtualIndex];
+                tarefa.status = 'nao_deu_tempo';
+                tarefa.motivo_nao_concluida = motivo;
+                tarefa.horario_conclusao = new Date().toISOString();
+                
+                this.metricas.nao_deu_tempo++;
+                
+                this.fecharModalNaoDeuTempo();
+                await this.salvarProgresso();
+                await this.proximaTarefa();
             }
 
-            async fazerLogin(email, senha) {
-                this.showLoading();
-                
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: senha
-                });
-
-                this.hideLoading();
-
-                if (error) {
-                    alert('Erro ao fazer login: ' + error.message);
-                    return;
+            async proximaTarefa() {
+                if (this.tarefaAtualIndex < this.tarefas.length - 1) {
+                    this.tarefaAtualIndex++;
+                    await this.salvarProgresso();
+                    this.renderTarefaAtual();
+                } else {
+                    await this.finalizarRotina();
                 }
+            }
 
-                this.currentUser = data.user;
-                await this.verificarAdmin();
-                await this.carregarDados();
-                this.iniciarVerificacaoHorario();
-                this.render();
+            async tarefaAnterior() {
+                if (this.tarefaAtualIndex > 0) {
+                    this.tarefaAtualIndex--;
+                    await this.salvarProgresso();
+                    this.renderTarefaAtual();
+                }
+            }
+
+            async salvarProgresso() {
+                const hoje = new Date().toISOString().split('T')[0];
+                
+                await supabase
+                    .from('progresso_diario')
+                    .upsert({
+                        user_id: this.currentUser.id,
+                        data: hoje,
+                        periodo: this.periodo,
+                        tarefa_atual_index: this.tarefaAtualIndex,
+                        progresso: { tarefas: this.tarefas },
+                        metricas: this.metricas,
+                        status: 'em_andamento'
+                    }, {
+                        onConflict: 'user_id,data,periodo'
+                    });
+            }
+
+            async finalizarRotina() {
+                const hoje = new Date().toISOString().split('T')[0];
+                
+                await supabase
+                    .from('progresso_diario')
+                    .update({
+                        status: 'finalizado',
+                        finalizado_em: new Date().toISOString(),
+                        metricas: this.metricas
+                    })
+                    .eq('user_id', this.currentUser.id)
+                    .eq('data', hoje)
+                    .eq('periodo', this.periodo);
+
+                this.renderResumo();
+            }
+
+            abrirModalPausa() {
+                document.getElementById('modalPausa').classList.add('active');
+            }
+
+            fecharModalPausa() {
+                document.getElementById('modalPausa').classList.remove('active');
+            }
+
+            async confirmarPausa() {
+                const hoje = new Date().toISOString().split('T')[0];
+                
+                await supabase
+                    .from('progresso_diario')
+                    .update({ status: 'pausado' })
+                    .eq('user_id', this.currentUser.id)
+                    .eq('data', hoje)
+                    .eq('periodo', this.periodo);
+
+                this.fecharModalPausa();
+                this.renderDashboard();
+            }
+
+            iniciarAutoSave() {
+                if (this.autoSaveInterval) {
+                    clearInterval(this.autoSaveInterval);
+                }
+                this.autoSaveInterval = setInterval(() => {
+                    if (this.periodo && this.tarefas.length > 0) {
+                        this.salvarProgresso();
+                    }
+                }, 30000); // Auto-save a cada 30 segundos
             }
 
             async logout() {
-                if (this.intervaloNotificacao) {
-                    clearInterval(this.intervaloNotificacao);
+                if (this.autoSaveInterval) {
+                    clearInterval(this.autoSaveInterval);
                 }
                 await supabase.auth.signOut();
                 this.currentUser = null;
-                this.isAdmin = false;
                 this.renderLogin();
             }
 
-            toggleTarefa(blocoId, tarefaId) {
-                const bloco = this.rotinaTrabalho.find(r => r.id === blocoId);
-                if (bloco) {
-                    const tarefa = bloco.tarefas.find(t => t.id === tarefaId);
-                    if (tarefa) {
-                        tarefa.completo = !tarefa.completo;
-                          clearTimeout(this.autoSaveTimeout);
-            this.autoSaveTimeout = setTimeout(() => {
-                this.salvarProgressoAutomatico();
-            }, 500);
-                        this.render();
-                    }
-                }
+            calcularProgresso() {
+                const total = this.tarefas.length;
+                const realizadas = this.tarefas.filter(t => 
+                    t.status === 'concluida' || t.status === 'nao_deu_tempo'
+                ).length;
+                return Math.round((realizadas / total) * 100);
             }
 
-            calcularEstatisticas() {
-                let totalTarefas = 0;
-                let tarefasCompletas = 0;
-
-                this.rotinaTrabalho.forEach(bloco => {
-                    bloco.tarefas.forEach(tarefa => {
-                        totalTarefas++;
-                        if (tarefa.completo) tarefasCompletas++;
-                    });
-                });
-
-                return {
-                    total: totalTarefas,
-                    completas: tarefasCompletas,
-                    percentual: totalTarefas > 0 ? Math.round((tarefasCompletas / totalTarefas) * 100) : 0
-                };
-            }
-
-            calcularPercentualBloco(bloco) {
-                const total = bloco.tarefas.length;
-                const completas = bloco.tarefas.filter(t => t.completo).length;
-                return total > 0 ? Math.round((completas / total) * 100) : 0;
-            }
-
-            estaNoHorario(horarioInicio) {
-                const agora = new Date();
-                const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
-                return horarioInicio === horaAtual.substring(0, 5);
-            }
-
-            async salvarDiaNoHistorico() {
-                const hoje = this.getDataAtual();
-                const stats = this.calcularEstatisticas();
-
-                const detalhes = this.rotinaTrabalho.map(bloco => ({
-                    etiqueta: bloco.etiqueta,
-                    horario: bloco.horario,
-                    tarefas: bloco.tarefas.map(t => ({
-                        texto: t.texto,
-                        completo: t.completo
-                    })),
-                    percentual: this.calcularPercentualBloco(bloco)
-                }));
-
-                this.showLoading();
-
-                await supabase
-                    .from('historico_desempenho')
-                    .delete()
-                    .eq('user_id', this.currentUser.id)
-                    .eq('data', hoje);
-
-                const { error } = await supabase
-                    .from('historico_desempenho')
-                    .insert({
-                        user_id: this.currentUser.id,
-                        data: hoje,
-                        tarefas_completas: stats.completas,
-                        total_tarefas: stats.total,
-                        percentual: stats.percentual,
-                        detalhes: detalhes
-                    });
-
-                await this.carregarDados();
-                this.hideLoading();
-
-                if (!error) {
-                    alert(`✅ Dia registrado!\n\n📊 Você completou ${stats.completas} de ${stats.total} tarefas (${stats.percentual}%)`);
-                }
-            }
-
-            resetarRotina() {
-                if (confirm('Deseja resetar todas as tarefas da rotina?')) {
-                    this.rotinaTrabalho.forEach(bloco => {
-                        bloco.tarefas.forEach(tarefa => {
-                            tarefa.completo = false;
-                        });
-                    });
-                    alert('Rotina resetada com sucesso!');
-                    this.render();
-                }
-            }
-
-            // ===== FUNÇÕES DE GERENCIAMENTO DE USUÁRIOS =====
-
-            toggleSenhaVisivel(userId) {
-                // Esta função na verdade não é necessária pois já mostramos a senha
-                // Mas podemos usar para adicionar um histórico ou log
-                this.render();
-            }
-
-            abrirModalResetarSenha(usuario) {
-                this.usuarioEditandoSenha = usuario;
-                this.renderizarModalSenha();
-                document.getElementById('modalResetarSenha').classList.add('active');
-            }
-
-            fecharModalSenha() {
-                document.getElementById('modalResetarSenha').classList.remove('active');
-                this.usuarioEditandoSenha = null;
-            }
-
-            renderizarModalSenha() {
-                const conteudo = document.getElementById('conteudoModalSenha');
-                
-                conteudo.innerHTML = `
-                    <div class="space-y-4">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <p class="text-sm text-gray-700"><strong>Usuário:</strong> ${this.usuarioEditandoSenha.nome}</p>
-                            <p class="text-sm text-gray-700"><strong>Email:</strong> ${this.usuarioEditandoSenha.email}</p>
+            renderSidebarRegras() {
+                return `
+                    <div class="sidebar-regras">
+                        <h3 class="text-lg font-bold text-cm-escuro mb-4">⚠️ REGRAS DO DIA</h3>
+                        <div class="space-y-3">
+                            ${this.regras.filter(r => r.tipo === 'regra').map(regra => `
+                                <div class="regra-item bg-gray-50 p-3 rounded-lg">
+                                    <p class="text-sm font-semibold text-gray-800">
+                                        ${regra.icone} ${regra.texto}
+                                    </p>
+                                </div>
+                            `).join('')}
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">🔑 Nova Senha</label>
-                            <input 
-                                type="text" 
-                                id="novaSenhaInput" 
-                                placeholder="Digite a nova senha (mínimo 6 caracteres)"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" 
-                            />
-                            <p class="text-xs text-gray-500 mt-2">Mínimo de 6 caracteres</p>
+                        <h3 class="text-lg font-bold text-cm-escuro mt-6 mb-4">💡 LEMBRETES</h3>
+                        <div class="space-y-3">
+                            ${this.regras.filter(r => r.tipo === 'lembrete').map(lembrete => `
+                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                                    <p class="text-sm text-gray-700">
+                                        ${lembrete.icone} ${lembrete.texto}
+                                    </p>
+                                </div>
+                            `).join('')}
                         </div>
 
-                        <div class="flex gap-3">
-                            <button onclick="app.confirmarResetarSenha()" class="flex-1 bg-cm-laranja hover:opacity-90 text-white py-3 rounded-lg font-bold">
-                                💾 Resetar Senha
-                            </button>
-                            <button onclick="app.fecharModalSenha()" class="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold">
-                                ❌ Cancelar
-                            </button>
-                        </div>
-
-                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
-                            <p class="text-xs text-gray-700">⚠️ <strong>Atenção:</strong> Esta ação irá alterar a senha do usuário. Certifique-se de informá-lo da nova senha.</p>
-                        </div>
-                    </div>
-                `;
-            }
-
-            async confirmarResetarSenha() {
-                const novaSenha = document.getElementById('novaSenhaInput').value;
-
-                if (!novaSenha || novaSenha.length < 6) {
-                    alert('❌ A senha deve ter no mínimo 6 caracteres!');
-                    return;
-                }
-
-                if (!confirm(`Confirma resetar a senha de ${this.usuarioEditandoSenha.nome}?`)) {
-                    return;
-                }
-
-                // Armazenar senha localmente
-                this.senhasVisiveis[this.usuarioEditandoSenha.user_id] = novaSenha;
-
-                this.fecharModalSenha();
-                await this.carregarUsuarios();
-                this.render();
-                
-                alert(`✅ Senha definida com sucesso!\n\n👤 Usuário: ${this.usuarioEditandoSenha.nome}\n📧 Email: ${this.usuarioEditandoSenha.email}\n🔑 Nova senha: ${novaSenha}\n\n⚠️ IMPORTANTE: Anote esta senha e informe o usuário imediatamente!`);
-            }
-
-            async excluirUsuario(usuario) {
-                if (!confirm(`⚠️ Tem certeza que deseja EXCLUIR o usuário ${usuario.nome}?\n\nEsta ação NÃO pode ser desfeita!`)) {
-                    return;
-                }
-
-                if (!confirm(`ÚLTIMA CONFIRMAÇÃO: Excluir ${usuario.email}?`)) {
-                    return;
-                }
-
-                this.showLoading();
-
-                try {
-                    // Deletar dados relacionados
-                    await supabase.from('historico_desempenho').delete().eq('user_id', usuario.user_id);
-                    await supabase.from('user_roles').delete().eq('user_id', usuario.user_id);
-                    await supabase.from('user_credentials').delete().eq('user_id', usuario.user_id);
-
-                    // Remover senha armazenada
-                    delete this.senhasVisiveis[usuario.user_id];
-
-                    await this.carregarUsuarios();
-                    this.render();
-                    
-                    alert('✅ Usuário excluído com sucesso!');
-
-                } catch (error) {
-                    alert('❌ Erro ao excluir usuário: ' + error.message);
-                }
-
-                this.hideLoading();
-            }
-
-            copiarSenha(senha) {
-                navigator.clipboard.writeText(senha).then(() => {
-                    alert('✅ Senha copiada para a área de transferência!');
-                }).catch(() => {
-                    alert('❌ Erro ao copiar. Senha: ' + senha);
-                });
-            }
-
-            async promoverParaAdmin(usuario) {
-                if (!confirm(`Promover ${usuario.nome} para ADMINISTRADOR?`)) {
-                    return;
-                }
-
-                this.showLoading();
-
-                const { error } = await supabase
-                    .from('user_roles')
-                    .upsert({
-                        user_id: usuario.user_id,
-                        is_admin: true
-                    });
-
-                if (!error) {
-                    await this.carregarUsuarios();
-                    this.render();
-                    alert(`✅ ${usuario.nome} agora é Administrador!`);
-                }
-
-                this.hideLoading();
-            }
-
-            async removerAdmin(usuario) {
-                if (!confirm(`Remover privilégios de administrador de ${usuario.nome}?`)) {
-                    return;
-                }
-
-                this.showLoading();
-
-                const { error } = await supabase
-                    .from('user_roles')
-                    .update({ is_admin: false })
-                    .eq('user_id', usuario.user_id);
-
-                if (!error) {
-                    await this.carregarUsuarios();
-                    this.render();
-                    alert(`✅ ${usuario.nome} não é mais Administrador!`);
-                }
-
-                this.hideLoading();
-            }
-
-            // ===== FUNÇÕES DE EDIÇÃO DE ROTINA =====
-
-            abrirModalRotina(dia) {
-                this.editandoDia = dia;
-                this.blocosEditando = JSON.parse(JSON.stringify(this.rotinasSemana[dia] || []));
-                
-                if (this.blocosEditando.length === 0) {
-                    this.blocosEditando.push(this.criarBlocoVazio());
-                }
-
-                document.getElementById('tituloModal').textContent = `Editar Rotina - ${this.getDiaSemanaTexto(dia)}`;
-                this.renderizarModalRotina();
-                document.getElementById('modalEditarRotina').classList.add('active');
-            }
-
-            fecharModalRotina() {
-                document.getElementById('modalEditarRotina').classList.remove('active');
-                this.editandoDia = null;
-                this.blocosEditando = [];
-            }
-
-            criarBlocoVazio() {
-                return {
-                    id: Date.now(),
-                    dia_semana: this.editandoDia,
-                    horario: '08:00 - 09:00',
-                    horario_inicio: '08:00',
-                    etiqueta: 'Nova Tarefa',
-                    cor: 'bg-cm-turquesa',
-                    tarefas: ['Tarefa 1'],
-                    ordem: this.blocosEditando.length
-                };
-            }
-
-            adicionarBloco() {
-                this.blocosEditando.push(this.criarBlocoVazio());
-                this.renderizarModalRotina();
-            }
-
-            removerBloco(index) {
-                if (confirm('Deseja realmente remover este bloco?')) {
-                    this.blocosEditando.splice(index, 1);
-                    this.renderizarModalRotina();
-                }
-            }
-
-            adicionarTarefa(blocoIndex) {
-                this.blocosEditando[blocoIndex].tarefas.push(`Tarefa ${this.blocosEditando[blocoIndex].tarefas.length + 1}`);
-                this.renderizarModalRotina();
-            }
-
-            removerTarefa(blocoIndex, tarefaIndex) {
-                if (this.blocosEditando[blocoIndex].tarefas.length > 1) {
-                    this.blocosEditando[blocoIndex].tarefas.splice(tarefaIndex, 1);
-                    this.renderizarModalRotina();
-                } else {
-                    alert('Cada bloco precisa ter pelo menos 1 tarefa!');
-                }
-            }
-
-            atualizarCampoBloco(blocoIndex, campo, valor) {
-                this.blocosEditando[blocoIndex][campo] = valor;
-                
-                if (campo === 'horario_inicio') {
-                    const inicio = valor;
-                    const partes = inicio.split(':');
-                    const horaFim = (parseInt(partes[0]) + 1).toString().padStart(2, '0');
-                    const fim = `${horaFim}:${partes[1]}`;
-                    this.blocosEditando[blocoIndex].horario = `${inicio} - ${fim}`;
-                }
-            }
-
-            atualizarTarefa(blocoIndex, tarefaIndex, valor) {
-                this.blocosEditando[blocoIndex].tarefas[tarefaIndex] = valor;
-            }
-
-            moverBlocoCima(index) {
-                if (index > 0) {
-                    const temp = this.blocosEditando[index];
-                    this.blocosEditando[index] = this.blocosEditando[index - 1];
-                    this.blocosEditando[index - 1] = temp;
-                    this.renderizarModalRotina();
-                }
-            }
-
-            moverBlocoBaixo(index) {
-                if (index < this.blocosEditando.length - 1) {
-                    const temp = this.blocosEditando[index];
-                    this.blocosEditando[index] = this.blocosEditando[index + 1];
-                    this.blocosEditando[index + 1] = temp;
-                    this.renderizarModalRotina();
-                }
-            }
-
-            async salvarRotinaDia() {
-                if (!this.blocosEditando || this.blocosEditando.length === 0) {
-                    alert('Adicione pelo menos um bloco de tarefas!');
-                    return;
-                }
-
-                this.showLoading();
-
-                try {
-                    await supabase
-                        .from('rotinas_semanais')
-                        .delete()
-                        .eq('dia_semana', this.editandoDia);
-
-                    const rotinasPraSalvar = this.blocosEditando.map((bloco, index) => ({
-                        dia_semana: this.editandoDia,
-                        horario: bloco.horario,
-                        horario_inicio: bloco.horario_inicio,
-                        etiqueta: bloco.etiqueta,
-                        cor: bloco.cor,
-                        tarefas: bloco.tarefas,
-                        ordem: index
-                    }));
-
-                    const { error } = await supabase
-                        .from('rotinas_semanais')
-                        .insert(rotinasPraSalvar);
-
-                    if (error) throw error;
-
-                    await this.carregarDados();
-                    this.fecharModalRotina();
-                    alert('✅ Rotina salva com sucesso!');
-                    this.render();
-
-                } catch (error) {
-                    alert('Erro ao salvar rotina: ' + error.message);
-                }
-
-                this.hideLoading();
-            }
-
-            renderizarModalRotina() {
-                const conteudo = document.getElementById('conteudoModalRotina');
-                
-                conteudo.innerHTML = `
-                    <div class="space-y-6">
-                        ${this.blocosEditando.map((bloco, blocoIndex) => `
-                            <div class="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-lg font-bold text-cm-escuro">Bloco ${blocoIndex + 1}</h3>
-                                    <div class="flex gap-2">
-                                        ${blocoIndex > 0 ? `<button onclick="app.moverBlocoCima(${blocoIndex})" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1 rounded text-sm">⬆️</button>` : ''}
-                                        ${blocoIndex < this.blocosEditando.length - 1 ? `<button onclick="app.moverBlocoBaixo(${blocoIndex})" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1 rounded text-sm">⬇️</button>` : ''}
-                                        <button onclick="app.removerBloco(${blocoIndex})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">🗑️</button>
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">⏰ Horário de Início</label>
-                                        <input type="time" value="${bloco.horario_inicio}" 
-                                            onchange="app.atualizarCampoBloco(${blocoIndex}, 'horario_inicio', this.value)"
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa" />
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">🏷️ Etiqueta</label>
-                                        <input type="text" value="${bloco.etiqueta}" 
-                                            onchange="app.atualizarCampoBloco(${blocoIndex}, 'etiqueta', this.value)"
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa"
-                                            placeholder="Ex: Revisão Matinal" />
-                                    </div>
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">🎨 Cor do Bloco</label>
-                                    <div class="flex gap-2">
-                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-cm-turquesa'); app.renderizarModalRotina();" 
-                                            class="w-12 h-12 rounded-lg bg-cm-turquesa ${bloco.cor === 'bg-cm-turquesa' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
-                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-cm-laranja'); app.renderizarModalRotina();" 
-                                            class="w-12 h-12 rounded-lg bg-cm-laranja ${bloco.cor === 'bg-cm-laranja' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
-                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-cm-verde'); app.renderizarModalRotina();" 
-                                            class="w-12 h-12 rounded-lg bg-cm-verde ${bloco.cor === 'bg-cm-verde' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
-                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-purple-500'); app.renderizarModalRotina();" 
-                                            class="w-12 h-12 rounded-lg bg-purple-500 ${bloco.cor === 'bg-purple-500' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
-                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-blue-500'); app.renderizarModalRotina();" 
-                                            class="w-12 h-12 rounded-lg bg-blue-500 ${bloco.cor === 'bg-blue-500' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
-                                        <button onclick="app.atualizarCampoBloco(${blocoIndex}, 'cor', 'bg-pink-500'); app.renderizarModalRotina();" 
-                                            class="w-12 h-12 rounded-lg bg-pink-500 ${bloco.cor === 'bg-pink-500' ? 'ring-4 ring-offset-2 ring-cm-escuro' : 'opacity-50 hover:opacity-100'}"></button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="flex justify-between items-center mb-3">
-                                        <label class="block text-sm font-semibold text-gray-700">📝 Tarefas</label>
-                                        <button onclick="app.adicionarTarefa(${blocoIndex})" 
-                                            class="bg-cm-verde hover:opacity-90 text-white px-3 py-1 rounded text-sm font-semibold">
-                                            ➕ Adicionar Tarefa
-                                        </button>
-                                    </div>
-                                    <div class="space-y-2">
-                                        ${bloco.tarefas.map((tarefa, tarefaIndex) => `
-                                            <div class="flex gap-2">
-                                                <input type="text" value="${tarefa}" 
-                                                    onchange="app.atualizarTarefa(${blocoIndex}, ${tarefaIndex}, this.value)"
-                                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa"
-                                                    placeholder="Digite a tarefa..." />
-                                                <button onclick="app.removerTarefa(${blocoIndex}, ${tarefaIndex})" 
-                                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm">
-                                                    🗑️
-                                                </button>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
+                        <h3 class="text-lg font-bold text-cm-escuro mt-6 mb-4">📲 PLATAFORMAS</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center p-2 rounded ${this.statusPlataformas.whatsapp_ok ? 'bg-green-50' : 'bg-red-50'}">
+                                <span class="text-sm font-semibold">WhatsApp</span>
+                                <span>${this.statusPlataformas.whatsapp_ok ? '✅' : '❌'}</span>
                             </div>
-                        `).join('')}
-
-                        <button onclick="app.adicionarBloco()" 
-                            class="w-full bg-cm-turquesa hover:opacity-90 text-white py-3 rounded-lg font-semibold text-lg">
-                            ➕ Adicionar Novo Bloco de Tarefas
-                        </button>
-
-                        <div class="flex gap-3">
-                            <button onclick="app.salvarRotinaDia()" 
-                                class="flex-1 bg-cm-laranja hover:opacity-90 text-white py-3 rounded-lg font-bold text-lg">
-                                💾 Salvar Rotina
-                            </button>
-                            <button onclick="app.fecharModalRotina()" 
-                                class="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-3 rounded-lg font-bold text-lg">
-                                ❌ Cancelar
-                            </button>
+                            <div class="flex justify-between items-center p-2 rounded ${this.statusPlataformas.ll_ok ? 'bg-green-50' : 'bg-red-50'}">
+                                <span class="text-sm font-semibold">LL (CRM)</span>
+                                <span>${this.statusPlataformas.ll_ok ? '✅' : '❌'}</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 rounded bg-green-50">
+                                <span class="text-sm font-semibold">Rotina</span>
+                                <span>✅</span>
+                            </div>
                         </div>
                     </div>
                 `;
-            }
-
-            getHistoricoMesAtual() {
-                const hoje = new Date();
-                const mesAtual = hoje.getMonth();
-                const anoAtual = hoje.getFullYear();
-                
-                return this.historicoDesempenho.filter(h => {
-                    const dataHist = new Date(h.data);
-                    return dataHist.getMonth() === mesAtual && dataHist.getFullYear() === anoAtual;
-                });
-            }
-
-            analisarDesempenho() {
-                const historicoMes = this.getHistoricoMesAtual();
-                
-                if (historicoMes.length === 0) {
-                    return {
-                        mediaGeral: 0,
-                        tarefasMaisFalhas: [],
-                        blocosMaisFalhas: []
-                    };
-                }
-
-                const mediaGeral = historicoMes.reduce((sum, h) => sum + h.percentual, 0) / historicoMes.length;
-
-                const contagemTarefas = {};
-                historicoMes.forEach(dia => {
-                    dia.detalhes.forEach(bloco => {
-                        bloco.tarefas.forEach(tarefa => {
-                            const chave = `${bloco.etiqueta}: ${tarefa.texto}`;
-                            if (!contagemTarefas[chave]) {
-                                contagemTarefas[chave] = { total: 0, falhas: 0 };
-                            }
-                            contagemTarefas[chave].total++;
-                            if (!tarefa.completo) {
-                                contagemTarefas[chave].falhas++;
-                            }
-                        });
-                    });
-                });
-
-                const tarefasMaisFalhas = Object.entries(contagemTarefas)
-                    .map(([tarefa, dados]) => ({
-                        tarefa,
-                        percentualFalha: Math.round((dados.falhas / dados.total) * 100)
-                    }))
-                    .filter(t => t.percentualFalha > 30)
-                    .sort((a, b) => b.percentualFalha - a.percentualFalha)
-                    .slice(0, 5);
-
-                const contagemBlocos = {};
-                historicoMes.forEach(dia => {
-                    dia.detalhes.forEach(bloco => {
-                        if (!contagemBlocos[bloco.etiqueta]) {
-                            contagemBlocos[bloco.etiqueta] = { total: 0, soma: 0 };
-                        }
-                        contagemBlocos[bloco.etiqueta].total++;
-                        contagemBlocos[bloco.etiqueta].soma += bloco.percentual;
-                    });
-                });
-
-                const blocosMaisFalhas = Object.entries(contagemBlocos)
-                    .map(([bloco, dados]) => ({
-                        bloco,
-                        mediaPercentual: Math.round(dados.soma / dados.total)
-                    }))
-                    .sort((a, b) => a.mediaPercentual - b.mediaPercentual)
-                    .slice(0, 3);
-
-                return { mediaGeral, tarefasMaisFalhas, blocosMaisFalhas };
             }
 
             renderLogin() {
@@ -1066,439 +592,344 @@ async carregarRotinaDoDia() {
                                     </div>
                                 </div>
                             </div>
-                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Controle de Consultor v2.2</h1>
-                            <p class="text-gray-600 text-center mb-6 text-sm">🔔 Notificações | 📅 Rotinas | 👑 Admin | 👥 Usuários</p>
+                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Rotina do Consultor v3.0</h1>
+                            <p class="text-gray-600 text-center mb-6 text-sm">🎯 Uma tarefa por vez | ⏱️ Timer 5min | 📊 Métricas</p>
                             
-                            <div class="flex gap-2 mb-6">
-                                <button id="btnLogin" onclick="app.mostrarAba('login')" class="flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white">Login</button>
-                                <button id="btnRegistro" onclick="app.mostrarAba('registro')" class="flex-1 px-4 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700">Criar Conta</button>
-                            </div>
-
-                            <div id="formLogin">
+                            <div>
                                 <input type="email" id="loginEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
                                 <input type="password" id="loginSenha" placeholder="Senha" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
-                                <button onclick="app.fazerLogin(document.getElementById('loginEmail').value, document.getElementById('loginSenha').value)" class="w-full btn-cm text-white py-3 rounded-lg font-semibold transition">Entrar</button>
-                            </div>
-
-                            <div id="formRegistro" style="display: none;">
-                                <input type="text" id="registroNome" placeholder="Nome Completo" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
-                                <input type="email" id="registroEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
-                                <input type="password" id="registroSenha" placeholder="Senha (mínimo 6 caracteres)" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
-                                <button onclick="app.registrarUsuario(document.getElementById('registroNome').value, document.getElementById('registroEmail').value, document.getElementById('registroSenha').value)" class="w-full btn-cm text-white py-3 rounded-lg font-semibold transition">Criar Conta</button>
+                                <button onclick="app.fazerLogin()" class="w-full btn-primary">Entrar</button>
                             </div>
                         </div>
                     </div>
                 `;
             }
 
-            mostrarAba(aba) {
-                const btnLogin = document.getElementById('btnLogin');
-                const btnRegistro = document.getElementById('btnRegistro');
-                const formLogin = document.getElementById('formLogin');
-                const formRegistro = document.getElementById('formRegistro');
+            async fazerLogin() {
+                const email = document.getElementById('loginEmail').value;
+                const senha = document.getElementById('loginSenha').value;
+                
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: senha
+                });
 
-                if (aba === 'login') {
-                    btnLogin.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white';
-                    btnRegistro.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700';
-                    formLogin.style.display = 'block';
-                    formRegistro.style.display = 'none';
-                } else {
-                    btnLogin.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-gray-200 text-gray-700';
-                    btnRegistro.className = 'flex-1 px-4 py-2 rounded-lg font-semibold bg-cm-turquesa text-white';
-                    formLogin.style.display = 'none';
-                    formRegistro.style.display = 'block';
-                }
-            }
-
-            render() {
-                if (!this.currentUser) {
-                    this.renderLogin();
+                if (error) {
+                    alert('❌ Erro ao fazer login: ' + error.message);
                     return;
                 }
 
+                this.currentUser = data.user;
+                await this.carregarDados();
+                this.iniciarAutoSave();
+                this.renderDashboard();
+            }
+
+            renderDashboard() {
                 const app = document.getElementById('app');
                 const nomeUsuario = this.currentUser.user_metadata?.nome || this.currentUser.email.split('@')[0];
-                const stats = this.calcularEstatisticas();
+                const horaAtual = new Date().getHours();
+                const periodo = horaAtual < 13 ? 'manha' : 'tarde';
+                const periodoTexto = periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde';
 
-                const menuAdmin = this.isAdmin ? `
-                    <button onclick="app.currentPage = 'admin'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'admin' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">📅 Rotinas</button>
-                    <button onclick="app.currentPage = 'usuarios'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'usuarios' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">👥 Usuários</button>
-                ` : '';
-
-                const menu = `
-                    <div class="bg-white shadow border-b">
-                        <div class="max-w-6xl mx-auto flex gap-4 px-4 py-3 overflow-x-auto">
-                            <button onclick="app.currentPage = 'rotina'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'rotina' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">✅ Rotina</button>
-                            <button onclick="app.currentPage = 'analise'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'analise' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">📊 Análise</button>
-                            ${menuAdmin}
-                            <button onclick="app.currentPage = 'config'; app.render();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold ${this.currentPage === 'config' ? 'bg-cm-turquesa text-white' : 'bg-gray-200 text-gray-700'}">🔧 Config</button>
+                app.innerHTML = `
+                    <div class="min-h-screen bg-gray-50">
+                        <div class="bg-cm-escuro text-white shadow-lg">
+                            <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+                                <div>
+                                    <h1 class="text-xl font-bold">C&M Rotina v3.0</h1>
+                                    <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
+                                </div>
+                                <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                            </div>
                         </div>
+
+                        <div class="max-w-4xl mx-auto px-4 py-8">
+                            <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+                                <h2 class="text-3xl font-bold text-cm-escuro mb-4 text-center">
+                                    ${periodoTexto}
+                                </h2>
+                                <p class="text-gray-600 text-center mb-8">
+                                    Pronto para iniciar sua rotina?
+                                </p>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+                                        <p class="font-semibold text-blue-800">📋 Tarefas</p>
+                                        <p class="text-2xl font-bold text-blue-900">${periodo === 'manha' ? '12' : '20'}</p>
+                                    </div>
+                                    <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded">
+                                        <p class="font-semibold text-green-800">⏱️ Tempo Estimado</p>
+                                        <p class="text-2xl font-bold text-green-900">${periodo === 'manha' ? '~2h' : '~3h'}</p>
+                                    </div>
+                                </div>
+
+                                <button onclick="app.iniciarRotina('${periodo}')" class="w-full btn-primary text-lg py-4">
+                                    🚀 Iniciar Rotina de ${periodoTexto}
+                                </button>
+                            </div>
+
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
+                                <h3 class="font-bold text-yellow-800 mb-2">💡 Como funciona:</h3>
+                                <ul class="text-gray-700 space-y-2 text-sm">
+                                    <li>✅ Uma tarefa por vez na tela</li>
+                                    <li>⏱️ Timer de 5 minutos para leads novos</li>
+                                    <li>📊 Métricas em tempo real</li>
+                                    <li>💾 Salvamento automático do progresso</li>
+                                    <li>❌ Opção "Não deu tempo" com justificativa</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        ${this.renderSidebarRegras()}
                     </div>
                 `;
+            }
 
-                if (this.currentPage === 'rotina') {
-                    app.innerHTML = `
-                        <div class="min-h-screen bg-gray-50">
-                            <div class="bg-cm-escuro text-white shadow-lg">
-                                <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-                                    <div class="flex items-center gap-4">
-                                        <div class="flex gap-1">
-                                            <div class="w-8 h-10 bg-cm-laranja rounded flex items-center justify-center">
-                                                <span class="text-cm-escuro text-xl font-bold">C</span>
-                                            </div>
-                                            <div class="w-8 h-10 bg-cm-verde rounded flex items-center justify-center">
-                                                <span class="text-cm-escuro text-xl font-bold">&</span>
-                                            </div>
-                                            <div class="w-8 h-10 bg-cm-turquesa rounded flex items-center justify-center">
-                                                <span class="text-cm-escuro text-xl font-bold">M</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h1 class="text-xl font-bold">C&M v2.2 ${this.isAdmin ? '👑' : ''}</h1>
-                                            <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
-                                        </div>
-                                    </div>
+            renderTarefaAtual() {
+                const app = document.getElementById('app');
+                const tarefa = this.tarefas[this.tarefaAtualIndex];
+                const progresso = this.calcularProgresso();
+                const periodoTexto = this.periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde';
+
+                // Definir cor baseado no tipo
+                let corTipo = 'bg-blue-500';
+                if (tarefa.tipo === 'prioritaria') corTipo = 'bg-red-500';
+                if (tarefa.tipo === 'verificacao') corTipo = 'bg-green-500';
+
+                app.innerHTML = `
+                    <div class="min-h-screen bg-gray-50">
+                        <!-- Header -->
+                        <div class="bg-cm-escuro text-white shadow-lg">
+                            <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                <div>
+                                    <h1 class="text-xl font-bold">${periodoTexto} - Tarefa ${this.tarefaAtualIndex + 1} de ${this.tarefas.length}</h1>
+                                    <p class="text-xs text-gray-300">⏰ ${tarefa.horario_inicio || 'Horário livre'}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="app.abrirModalPausa()" class="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-lg text-sm">⏸️ Pausar</button>
                                     <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
                                 </div>
                             </div>
-
-                            ${menu}
-
-                            <div class="max-w-6xl mx-auto px-4 py-8">
-                                <div class="flex justify-between items-center mb-6">
-                                    <h2 class="text-2xl font-bold text-cm-escuro">✅ Rotina de ${this.getDiaSemanaTexto(this.diaAtual)}</h2>
-                                    <div class="flex gap-2">
-                                        <button onclick="app.salvarDiaNoHistorico()" class="bg-cm-laranja hover:opacity-90 text-white px-4 py-2 rounded-lg font-semibold">💾 Salvar Dia</button>
-                                        <button onclick="app.resetarRotina()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold">🔄 Resetar</button>
-                                    </div>
-                                </div>
-
-                                ${this.rotinaTrabalho.length === 0 ? `
-                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
-                                        <h3 class="text-lg font-bold text-yellow-800 mb-2">⚠️ Sem Rotina Programada</h3>
-                                        <p class="text-gray-700">Não há rotina programada para ${this.getDiaSemanaTexto(this.diaAtual)}.</p>
-                                        ${this.isAdmin ? '<p class="mt-2 text-gray-700">Vá para <strong>Rotinas</strong> e programe!</p>' : '<p class="mt-2 text-gray-700">Entre em contato com o administrador.</p>'}
-                                    </div>
-                                ` : `
-                                    <div class="bg-white p-6 rounded-lg shadow mb-6">
-                                        <div class="flex justify-between items-center mb-2">
-                                            <h3 class="text-lg font-bold text-cm-escuro">Progresso do Dia</h3>
-                                            <span class="text-2xl font-bold text-cm-turquesa">${stats.percentual}%</span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 rounded-full h-4">
-                                            <div class="bg-cm-verde h-4 rounded-full transition-all duration-500" style="width: ${stats.percentual}%"></div>
-                                        </div>
-                                        <p class="text-gray-600 text-sm mt-2">${stats.completas} de ${stats.total} tarefas completadas</p>
-                                        <p class="text-xs text-orange-600 mt-3">🔔 Você receberá notificações na hora de cada tarefa!</p>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 gap-4">
-                                        ${this.rotinaTrabalho.map(bloco => {
-                                            const percBloco = this.calcularPercentualBloco(bloco);
-                                            const estaAgora = this.estaNoHorario(bloco.horario_inicio);
-                                            return `
-                                            <div class="bg-white rounded-lg shadow-lg overflow-hidden ${estaAgora ? 'ring-4 ring-cm-laranja' : ''}">
-                                                <div class="${bloco.cor} text-white p-4 relative">
-                                                    ${estaAgora ? '<div class="absolute top-2 right-2 bg-cm-laranja text-white px-3 py-1 rounded-full text-xs font-bold badge-agora">🔔 AGORA</div>' : ''}
-                                                    <div class="flex justify-between items-center mb-2">
-                                                        <div>
-                                                            <h3 class="text-xl font-bold">${bloco.horario}</h3>
-                                                            <p class="text-sm opacity-90">${bloco.etiqueta}</p>
-                                                        </div>
-                                                        <div class="text-right">
-                                                            <div class="text-2xl font-bold">${percBloco}%</div>
-                                                            <div class="text-xs opacity-90">${bloco.tarefas.filter(t => t.completo).length}/${bloco.tarefas.length}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="w-full bg-white bg-opacity-30 rounded-full h-2">
-                                                        <div class="bg-white h-2 rounded-full transition-all duration-500" style="width: ${percBloco}%"></div>
-                                                    </div>
-                                                </div>
-                                                <div class="p-4">
-                                                    <h4 class="font-bold mb-3 text-gray-700">Tarefas:</h4>
-                                                    <div class="space-y-3">
-                                                        ${bloco.tarefas.map(tarefa => `
-                                                            <label class="flex items-start gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded transition">
-                                                                <input 
-                                                                    type="checkbox" 
-                                                                    class="checkbox-tarefa mt-1"
-                                                                    ${tarefa.completo ? 'checked' : ''}
-                                                                    onchange="app.toggleTarefa(${bloco.id}, ${tarefa.id})"
-                                                                />
-                                                                <span class="${tarefa.completo ? 'line-through text-gray-400' : 'text-gray-700'}">${tarefa.texto}</span>
-                                                            </label>
-                                                        `).join('')}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `}).join('')}
-                                    </div>
-                                `}
-                            </div>
                         </div>
-                    `;
-                } 
-                
-                else if (this.currentPage === 'usuarios' && this.isAdmin) {
-                    app.innerHTML = `
-                        <div class="min-h-screen bg-gray-50">
-                            <div class="bg-cm-escuro text-white shadow-lg">
-                                <div class="max-w-6xl mx-auto px-4 py-4">
-                                    <h1 class="text-xl font-bold">👥 Gerenciar Usuários</h1>
-                                </div>
-                            </div>
-                            ${menu}
-                            <div class="max-w-6xl mx-auto px-4 py-8">
-                                <h2 class="text-2xl font-bold mb-6 text-cm-escuro">Lista de Usuários</h2>
-                                
-                                <div class="bg-white rounded-lg shadow overflow-hidden">
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full">
-                                            <thead class="bg-cm-escuro text-white">
-                                                <tr>
-                                                    <th class="px-6 py-4 text-left font-semibold">Nome</th>
-                                                    <th class="px-6 py-4 text-left font-semibold">Email</th>
-                                                    <th class="px-6 py-4 text-left font-semibold">Senha</th>
-                                                    <th class="px-6 py-4 text-left font-semibold">Status</th>
-                                                    <th class="px-6 py-4 text-center font-semibold">Ações</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-gray-200">
-                                                ${this.listaUsuarios.length === 0 ? `
-                                                    <tr>
-                                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
-                                                            Nenhum usuário encontrado
-                                                        </td>
-                                                    </tr>
-                                                ` : this.listaUsuarios.map(usuario => `
-                                                    <tr class="hover:bg-gray-50">
-                                                        <td class="px-6 py-4">
-                                                            <div class="flex items-center gap-2">
-                                                                <span class="font-semibold text-gray-900">${usuario.nome}</span>
-                                                                ${usuario.is_admin ? '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-bold">👑 ADMIN</span>' : ''}
-                                                            </div>
-                                                        </td>
-                                                        <td class="px-6 py-4 text-gray-600">${usuario.email}</td>
-                                                        <td class="px-6 py-4">
-                                                            ${usuario.senha_original ? `
-                                                                <div class="flex items-center gap-2">
-                                                                    <code class="bg-green-100 text-green-800 px-3 py-1 rounded font-mono text-sm font-bold">${usuario.senha_original}</code>
-                                                                    <button onclick="app.copiarSenha('${usuario.senha_original}')" 
-                                                                        class="text-gray-500 hover:text-gray-700" title="Copiar senha">
-                                                                        📋
-                                                                    </button>
-                                                                </div>
-                                                            ` : '<span class="text-gray-400 text-sm">Não definida</span>'}
-                                                        </td>
-                                                        <td class="px-6 py-4">
-                                                            <span class="text-xs text-gray-500">
-                                                                ${new Date(usuario.created_at).toLocaleDateString('pt-BR')}
-                                                            </span>
-                                                        </td>
-                                                        <td class="px-6 py-4">
-                                                            <div class="flex gap-2 justify-center">
-                                                                <button onclick="app.abrirModalResetarSenha(${JSON.stringify(usuario).replace(/"/g, '&quot;')})" 
-                                                                    class="bg-cm-turquesa hover:opacity-90 text-white px-3 py-1 rounded text-sm font-semibold"
-                                                                    title="Resetar senha">
-                                                                    🔑
-                                                                </button>
-                                                                ${!usuario.is_admin ? `
-                                                                    <button onclick="app.promoverParaAdmin(${JSON.stringify(usuario).replace(/"/g, '&quot;')})" 
-                                                                        class="bg-yellow-500 hover:opacity-90 text-white px-3 py-1 rounded text-sm font-semibold"
-                                                                        title="Promover para Admin">
-                                                                        👑
-                                                                    </button>
-                                                                ` : `
-                                                                    <button onclick="app.removerAdmin(${JSON.stringify(usuario).replace(/"/g, '&quot;')})" 
-                                                                        class="bg-orange-500 hover:opacity-90 text-white px-3 py-1 rounded text-sm font-semibold"
-                                                                        title="Remover Admin">
-                                                                        ⬇️
-                                                                    </button>
-                                                                `}
-                                                                <button onclick="app.excluirUsuario(${JSON.stringify(usuario).replace(/"/g, '&quot;')})" 
-                                                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-semibold"
-                                                                    title="Excluir usuário">
-                                                                    🗑️
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                `).join('')}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
 
-                                <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-turquesa">
-                                        <p class="text-gray-600 text-sm">Total de Usuários</p>
-                                        <p class="text-4xl font-bold text-cm-escuro">${this.listaUsuarios.length}</p>
-                                    </div>
-                                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-yellow-400">
-                                        <p class="text-gray-600 text-sm">Administradores</p>
-                                        <p class="text-4xl font-bold text-cm-escuro">${this.listaUsuarios.filter(u => u.is_admin).length}</p>
-                                    </div>
-                                    <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-verde">
-                                        <p class="text-gray-600 text-sm">Consultores</p>
-                                        <p class="text-4xl font-bold text-cm-escuro">${this.listaUsuarios.filter(u => !u.is_admin).length}</p>
-                                    </div>
+                        <!-- Barra de Progresso -->
+                        <div class="bg-white shadow">
+                            <div class="max-w-6xl mx-auto px-4 py-3">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-semibold text-gray-700">Progresso Geral</span>
+                                    <span class="text-sm font-bold text-cm-turquesa">${progresso}%</span>
                                 </div>
-
-                                <div class="mt-8 bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg">
-                                    <h3 class="text-lg font-bold text-blue-800 mb-2">💡 Funcionalidades</h3>
-                                    <ul class="text-gray-700 space-y-2 text-sm">
-                                        <li>• <strong>👁️ Visualizar senha:</strong> Clique no ícone do olho para ver/ocultar a senha</li>
-                                        <li>• <strong>🔑 Resetar senha:</strong> Permite definir uma nova senha para o usuário</li>
-                                        <li>• <strong>👑 Promover/Remover Admin:</strong> Conceder ou remover privilégios administrativos</li>
-                                        <li>• <strong>🗑️ Excluir usuário:</strong> Remove permanentemente o usuário do sistema</li>
-                                    </ul>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="progress-bar bg-cm-verde h-3 rounded-full" style="width: ${progresso}%"></div>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>✅ ${this.metricas.concluidas} concluídas</span>
+                                    <span>❌ ${this.metricas.nao_deu_tempo} não deram tempo</span>
+                                    <span>⏭️ ${this.tarefas.length - this.tarefaAtualIndex} restantes</span>
                                 </div>
                             </div>
                         </div>
-                    `;
-                }
-                
-                else if (this.currentPage === 'admin' && this.isAdmin) {
-                    app.innerHTML = `
-                        <div class="min-h-screen bg-gray-50">
-                            <div class="bg-cm-escuro text-white shadow-lg">
-                                <div class="max-w-6xl mx-auto px-4 py-4">
-                                    <h1 class="text-xl font-bold">📅 Gerenciar Rotinas Semanais</h1>
-                                </div>
-                            </div>
-                            ${menu}
-                            <div class="max-w-6xl mx-auto px-4 py-8">
-                                <h2 class="text-2xl font-bold mb-6 text-cm-escuro">Rotinas da Semana</h2>
-                                
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    ${[1, 2, 3, 4, 5, 6, 0].map(dia => `
-                                        <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
-                                            <h3 class="text-lg font-bold text-cm-escuro mb-3">${this.getDiaSemanaTexto(dia)}</h3>
-                                            <p class="text-gray-600 mb-4">${this.rotinasSemana[dia]?.length || 0} blocos de tarefas</p>
-                                            <button onclick="app.abrirModalRotina(${dia})" class="w-full bg-cm-turquesa text-white py-2 rounded-lg hover:opacity-90 font-semibold">
-                                                ✏️ Editar Rotina
-                                            </button>
-                                        </div>
-                                    `).join('')}
-                                </div>
 
-                                <div class="mt-8 bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg">
-                                    <h3 class="text-lg font-bold text-blue-800 mb-2">💡 Como Usar</h3>
-                                    <ul class="text-gray-700 space-y-2">
-                                        <li>• Clique em "Editar Rotina" para configurar cada dia da semana</li>
-                                        <li>• Adicione blocos de tarefas com horários específicos</li>
-                                        <li>• Personalize cores e etiquetas para cada bloco</li>
-                                        <li>• As mudanças serão visíveis para todos os usuários</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                else if (this.currentPage === 'analise') {
-                    const analise = this.analisarDesempenho();
-                    const historicoMes = this.getHistoricoMesAtual();
-
-                    app.innerHTML = `
-                        <div class="min-h-screen bg-gray-50">
-                            <div class="bg-cm-escuro text-white shadow-lg">
-                                <div class="max-w-6xl mx-auto px-4 py-4">
-                                    <h1 class="text-xl font-bold">Análise de Desempenho</h1>
-                                </div>
-                            </div>
-                            ${menu}
-                            <div class="max-w-6xl mx-auto px-4 py-8">
-                                <h2 class="text-2xl font-bold mb-6 text-cm-escuro">📊 Análise Detalhada</h2>
-                                ${historicoMes.length === 0 ? `
-                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
-                                        <h3 class="text-lg font-bold text-yellow-800 mb-2">⚠️ Sem Dados</h3>
-                                        <p class="text-gray-700">Você ainda não salvou nenhum dia. Vá para a aba Rotina e clique em "Salvar Dia"!</p>
-                                    </div>
-                                ` : `
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                                        <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-turquesa">
-                                            <p class="text-gray-600 text-sm">Média Geral</p>
-                                            <p class="text-4xl font-bold text-cm-escuro">${analise.mediaGeral.toFixed(0)}%</p>
-                                            <p class="text-xs text-gray-500 mt-2">${historicoMes.length} dias</p>
-                                        </div>
-                                        <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-laranja">
-                                            <p class="text-gray-600 text-sm">Hoje</p>
-                                            <p class="text-4xl font-bold text-cm-escuro">${stats.percentual}%</p>
-                                            <p class="text-xs text-gray-500 mt-2">${stats.completas}/${stats.total}</p>
-                                        </div>
-                                        <div class="bg-white p-6 rounded-lg shadow border-t-4 border-cm-verde">
-                                            <p class="text-gray-600 text-sm">Dia Atual</p>
-                                            <p class="text-2xl font-bold text-cm-escuro">${this.getDiaSemanaTexto(this.diaAtual)}</p>
-                                            <p class="text-xs text-gray-500 mt-2">${this.rotinaTrabalho.length} blocos</p>
+                        <!-- Conteúdo Principal -->
+                        <div class="max-w-6xl mx-auto px-4 py-8 pr-[320px]">
+                            <!-- Card da Tarefa -->
+                            <div class="tarefa-card bg-white rounded-lg shadow-2xl overflow-hidden slide-in">
+                                <!-- Cabeçalho da Tarefa -->
+                                <div class="${corTipo} text-white p-6">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <span class="text-4xl">${tarefa.icone}</span>
+                                        <div>
+                                            <p class="text-sm opacity-90">${tarefa.categoria.toUpperCase()}</p>
+                                            <h2 class="text-2xl font-bold">${tarefa.tipo === 'prioritaria' ? '🔴 PRIORIDADE' : tarefa.tipo === 'verificacao' ? '✅ VERIFICAÇÃO' : '📋 TAREFA'}</h2>
                                         </div>
                                     </div>
-                                    ${analise.tarefasMaisFalhas.length > 0 ? `
-                                        <div class="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg shadow">
-                                            <h3 class="text-xl font-bold text-red-800 mb-4">🚨 Tarefas com Mais Falhas</h3>
-                                            <div class="space-y-3">
-                                                ${analise.tarefasMaisFalhas.map(t => `
-                                                    <div class="bg-white p-4 rounded">
-                                                        <div class="flex justify-between items-center mb-2">
-                                                            <span class="text-gray-700 font-semibold">${t.tarefa}</span>
-                                                            <span class="text-red-600 font-bold">${t.percentualFalha}%</span>
-                                                        </div>
-                                                        <div class="w-full bg-gray-200 rounded-full h-2">
-                                                            <div class="bg-red-500 h-2 rounded-full" style="width: ${t.percentualFalha}%"></div>
-                                                        </div>
-                                                    </div>
-                                                `).join('')}
-                                            </div>
+                                </div>
+
+                                <!-- Corpo da Tarefa -->
+                                <div class="p-8">
+                                    <h3 class="text-2xl font-bold text-gray-800 mb-6">
+                                        ${tarefa.texto}
+                                    </h3>
+
+                                    ${tarefa.dica ? `
+                                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg mb-6">
+                                            <p class="text-sm font-semibold text-blue-800 mb-1">💡 DICA:</p>
+                                            <p class="text-gray-700">${tarefa.dica}</p>
                                         </div>
                                     ` : ''}
-                                `}
+
+                                    ${tarefa.tem_contador ? `
+                                        <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 mb-6">
+                                            <label class="block text-sm font-semibold text-gray-700 mb-3">📊 Contador (opcional):</label>
+                                            <input 
+                                                type="number" 
+                                                id="contadorInput" 
+                                                min="0"
+                                                value="${tarefa.contador_valor || 0}"
+                                                onchange="app.atualizarContador(this.value)"
+                                                class="w-full px-4 py-3 text-2xl font-bold text-center border-2 border-cm-turquesa rounded-lg focus:outline-none focus:ring-2 focus:ring-cm-turquesa"
+                                                placeholder="0"
+                                            />
+                                            <p class="text-xs text-gray-500 mt-2 text-center">
+                                                ${tarefa.categoria === 'atendimento' ? 'Quantos atendimentos realizados?' : 
+                                                  tarefa.categoria === 'prospeccao' ? 'Quantas ações de prospecção?' : 
+                                                  'Quantidade realizada'}
+                                            </p>
+                                        </div>
+                                    ` : ''}
+
+                                    ${tarefa.tempo_estimado_minutos ? `
+                                        <div class="flex items-center justify-center gap-2 text-gray-600 mb-6">
+                                            <span class="text-2xl">⏱️</span>
+                                            <span>Tempo estimado: <strong>${tarefa.tempo_estimado_minutos} min</strong></span>
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- Botões de Ação -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                                        <button onclick="app.concluirTarefa()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
+                                            <span class="text-2xl">✅</span>
+                                            <span>CONCLUÍDA</span>
+                                        </button>
+                                        <button onclick="app.abrirModalNaoDeuTempo()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
+                                            <span class="text-2xl">❌</span>
+                                            <span>NÃO DEU TEMPO</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Navegação -->
+                                    <div class="flex justify-between mt-6 pt-6 border-t">
+                                        <button 
+                                            onclick="app.tarefaAnterior()" 
+                                            ${this.tarefaAtualIndex === 0 ? 'disabled' : ''}
+                                            class="px-6 py-2 rounded-lg font-semibold ${this.tarefaAtualIndex === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-300 hover:bg-gray-400 text-gray-700'}">
+                                            ⬅️ Anterior
+                                        </button>
+                                        <span class="text-gray-500 flex items-center gap-2">
+                                            <span class="text-2xl">${tarefa.icone}</span>
+                                            <span class="font-semibold">${this.tarefaAtualIndex + 1}/${this.tarefas.length}</span>
+                                        </span>
+                                        <button 
+                                            onclick="app.proximaTarefa()" 
+                                            ${this.tarefaAtualIndex === this.tarefas.length - 1 ? 'disabled' : ''}
+                                            class="px-6 py-2 rounded-lg font-semibold ${this.tarefaAtualIndex === this.tarefas.length - 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-300 hover:bg-gray-400 text-gray-700'}">
+                                            Próxima ➡️
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Métricas do Dia -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                                <div class="bg-white p-4 rounded-lg shadow text-center">
+                                    <p class="text-3xl font-bold text-cm-turquesa">${this.metricas.concluidas}</p>
+                                    <p class="text-xs text-gray-600">Concluídas</p>
+                                </div>
+                                <div class="bg-white p-4 rounded-lg shadow text-center">
+                                    <p class="text-3xl font-bold text-red-500">${this.metricas.nao_deu_tempo}</p>
+                                    <p class="text-xs text-gray-600">Não Deu Tempo</p>
+                                </div>
+                                <div class="bg-white p-4 rounded-lg shadow text-center">
+                                    <p class="text-3xl font-bold text-blue-500">${this.metricas.leads_atendidos}</p>
+                                    <p class="text-xs text-gray-600">Leads Atendidos</p>
+                                </div>
+                                <div class="bg-white p-4 rounded-lg shadow text-center">
+                                    <p class="text-3xl font-bold text-green-500">${progresso}%</p>
+                                    <p class="text-xs text-gray-600">Progresso</p>
+                                </div>
                             </div>
                         </div>
-                    `;
-                }
+
+                        ${this.renderSidebarRegras()}
+                    </div>
+                `;
+            }
+
+            atualizarContador(valor) {
+                const tarefa = this.tarefas[this.tarefaAtualIndex];
+                tarefa.contador_valor = parseInt(valor) || 0;
                 
-                else {
-                    app.innerHTML = `
-                        <div class="min-h-screen bg-gray-50">
-                            <div class="bg-cm-escuro text-white shadow-lg">
-                                <div class="max-w-6xl mx-auto px-4 py-4">
-                                    <h1 class="text-xl font-bold">Configurações</h1>
-                                </div>
-                            </div>
-                            ${menu}
-                            <div class="max-w-6xl mx-auto px-4 py-8">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div class="bg-white p-6 rounded-lg shadow">
-                                        <h2 class="text-xl font-bold mb-4 text-cm-escuro">Informações da Conta</h2>
-                                        <p class="text-gray-600 mb-2"><strong>Email:</strong> ${this.currentUser.email}</p>
-                                        <p class="text-gray-600 mb-2"><strong>Nome:</strong> ${nomeUsuario}</p>
-                                        <p class="text-gray-600 mb-4"><strong>Status:</strong> ${this.isAdmin ? '👑 Administrador' : '👤 Consultor'}</p>
-                                        ${!this.isAdmin ? `
-                                            <button onclick="app.virarAdmin(prompt('Digite a senha de administrador:'))" class="w-full bg-cm-laranja text-white py-2 rounded-lg hover:opacity-90 mb-4">
-                                                👑 Virar Administrador
-                                            </button>
-                                        ` : ''}
-                                    </div>
-                                    
-                                    <div class="bg-white p-6 rounded-lg shadow">
-                                        <h2 class="text-xl font-bold mb-4 text-cm-escuro">Notificações</h2>
-                                        <p class="text-gray-600 mb-4">Status: <strong>${'Notification' in window && Notification.permission === 'granted' ? '✅ Ativadas' : '❌ Desativadas'}</strong></p>
-                                        ${Notification.permission !== 'granted' ? `
-                                            <button onclick="Notification.requestPermission().then(() => alert('Permissão atualizada!'))" class="w-full bg-cm-turquesa text-white py-2 rounded-lg hover:opacity-90">
-                                                🔔 Ativar Notificações
-                                            </button>
-                                        ` : ''}
-                                        <p class="text-xs text-gray-500 mt-4">Você receberá alertas na hora exata de cada tarefa.</p>
-                                    </div>
-                                </div>
+                // Atualizar métricas se for lead atendido
+                if (tarefa.categoria === 'atendimento') {
+                    this.metricas.leads_atendidos = this.tarefas
+                        .filter(t => t.categoria === 'atendimento' && t.contador_valor)
+                        .reduce((sum, t) => sum + t.contador_valor, 0);
+                }
+            }
+
+            renderResumo() {
+                const app = document.getElementById('app');
+                const periodoTexto = this.periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde';
+                const progresso = this.calcularProgresso();
+
+                // Calcular estatísticas
+                const tarefasMaisProblematicas = this.tarefas
+                    .filter(t => t.status === 'nao_deu_tempo')
+                    .map(t => ({ texto: t.texto, motivo: t.motivo_nao_concluida }));
+
+                app.innerHTML = `
+                    <div class="min-h-screen bg-gray-50">
+                        <div class="bg-cm-escuro text-white shadow-lg">
+                            <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+                                <h1 class="text-xl font-bold">Resumo - ${periodoTexto}</h1>
+                                <button onclick="app.renderDashboard()" class="bg-cm-turquesa hover:opacity-90 px-4 py-2 rounded-lg text-sm">🏠 Início</button>
                             </div>
                         </div>
-                    `;
-                }
+
+                        <div class="max-w-4xl mx-auto px-4 py-8">
+                            <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+                                <h2 class="text-3xl font-bold text-center text-cm-escuro mb-6">
+                                    🎉 Rotina Finalizada!
+                                </h2>
+
+                                <!-- Métricas Principais -->
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                                    <div class="bg-green-50 p-6 rounded-lg text-center">
+                                        <p class="text-4xl font-bold text-green-600">${this.metricas.concluidas}</p>
+                                        <p class="text-sm text-gray-600">Concluídas</p>
+                                    </div>
+                                    <div class="bg-red-50 p-6 rounded-lg text-center">
+                                        <p class="text-4xl font-bold text-red-600">${this.metricas.nao_deu_tempo}</p>
+                                        <p class="text-sm text-gray-600">Não Deu Tempo</p>
+                                    </div>
+                                    <div class="bg-blue-50 p-6 rounded-lg text-center">
+                                        <p class="text-4xl font-bold text-blue-600">${this.metricas.leads_atendidos}</p>
+                                        <p class="text-sm text-gray-600">Leads Atendidos</p>
+                                    </div>
+                                    <div class="bg-purple-50 p-6 rounded-lg text-center">
+                                        <p class="text-4xl font-bold text-purple-600">${progresso}%</p>
+                                        <p class="text-sm text-gray-600">Completude</p>
+                                    </div>
+                                </div>
+
+                                <!-- Tarefas que não deram tempo -->
+                                ${tarefasMaisProblematicas.length > 0 ? `
+                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-6">
+                                        <h3 class="font-bold text-yellow-800 mb-4">⚠️ Tarefas que Não Deram Tempo:</h3>
+                                        <div class="space-y-3">
+                                            ${tarefasMaisProblematicas.map(t => `
+                                                <div class="bg-white p-4 rounded-lg">
+                                                    <p class="font-semibold text-gray-800">${t.texto}</p>
+                                                    <p class="text-sm text-gray-600 mt-1"><strong>Motivo:</strong> ${t.motivo}</p>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                <!-- Botão Voltar -->
+                                <button onclick="app.renderDashboard()" class="w-full btn-primary py-4 text-lg">
+                                    ✅ Finalizar e Voltar ao Início
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
         }
 
-        const app = new ControlConsultor();
+        const app = new RotinaSequencial();
     </script>
 </body>
 </html>
