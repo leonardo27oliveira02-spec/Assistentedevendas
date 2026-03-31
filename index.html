@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C&M - Rotina Sequencial v3.0</title>
+    <title>C&M - Rotina Sequencial v3.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -13,90 +13,85 @@
             --cor-turquesa: #4ECDC4;
             --cor-escuro: #2C5F5D;
         }
-        
         .bg-cm-escuro { background-color: var(--cor-escuro); }
         .bg-cm-laranja { background-color: var(--cor-laranja); }
         .bg-cm-verde { background-color: var(--cor-verde); }
         .bg-cm-turquesa { background-color: var(--cor-turquesa); }
         .text-cm-escuro { color: var(--cor-escuro); }
         .text-cm-laranja { color: var(--cor-laranja); }
-        
+        .text-cm-turquesa { color: var(--cor-turquesa); }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
         .pulse-animation {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-        
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        
-        .slide-in {
-            animation: slideIn 0.3s ease-out;
+
+        .timer-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            transition: background-color 0.5s;
         }
-        
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+        .timer-ok { background-color: #10B981; }
+        .timer-warning { background-color: #F59E0B; }
+        .timer-danger { 
+            background-color: #EF4444;
+            animation: blink 0.8s infinite;
         }
-        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
         .modal {
             display: none;
             position: fixed;
             z-index: 50;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.5);
             overflow-y: auto;
         }
-        
         .modal.active {
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
         }
-        
         .modal-content {
             background: white;
             border-radius: 12px;
             max-width: 500px;
             width: 100%;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
         }
-        
-        .timer-warning {
-            animation: blink 1s infinite;
-        }
-        
-        @keyframes blink {
-            0%, 50%, 100% { opacity: 1; }
-            25%, 75% { opacity: 0.5; }
-        }
-        
-        .progress-bar {
-            transition: width 0.5s ease;
-        }
-        
-        .tarefa-card {
-            min-height: 400px;
-        }
-        
-        .regra-item {
-            border-left: 4px solid var(--cor-turquesa);
-        }
-        
+
+        .progress-bar { transition: width 0.5s ease; }
+
+        .tarefa-card { min-height: 420px; }
+
+        .regra-item { border-left: 4px solid var(--cor-turquesa); }
+
         .sidebar-regras {
             position: fixed;
-            right: 0;
-            top: 0;
+            right: 0; top: 0;
             height: 100vh;
             width: 300px;
             background: white;
@@ -105,56 +100,81 @@
             overflow-y: auto;
             z-index: 40;
         }
-        
         @media (max-width: 768px) {
-            .sidebar-regras {
-                display: none;
-            }
+            .sidebar-regras { display: none; }
         }
-        
+
         .btn-primary {
             background: linear-gradient(135deg, var(--cor-laranja), var(--cor-turquesa));
-            color: white;
-            font-weight: bold;
-            padding: 12px 24px;
-            border-radius: 8px;
-            transition: opacity 0.2s;
+            color: white; font-weight: bold;
+            padding: 12px 24px; border-radius: 8px;
+            transition: opacity 0.2s; cursor: pointer;
         }
-        
-        .btn-primary:hover {
-            opacity: 0.9;
-        }
-        
+        .btn-primary:hover { opacity: 0.9; }
         .btn-secondary {
-            background: #6B7280;
-            color: white;
-            font-weight: bold;
-            padding: 12px 24px;
-            border-radius: 8px;
-            transition: background 0.2s;
+            background: #6B7280; color: white; font-weight: bold;
+            padding: 12px 24px; border-radius: 8px;
+            transition: background 0.2s; cursor: pointer;
         }
-        
-        .btn-secondary:hover {
-            background: #4B5563;
-        }
-        
+        .btn-secondary:hover { background: #4B5563; }
         .btn-danger {
-            background: #EF4444;
-            color: white;
-            font-weight: bold;
-            padding: 12px 24px;
-            border-radius: 8px;
-            transition: background 0.2s;
+            background: #EF4444; color: white; font-weight: bold;
+            padding: 12px 24px; border-radius: 8px;
+            transition: background 0.2s; cursor: pointer;
         }
-        
-        .btn-danger:hover {
-            background: #DC2626;
+        .btn-danger:hover { background: #DC2626; }
+
+        .badge-prioritaria {
+            background: #FEE2E2; color: #DC2626;
+            padding: 2px 10px; border-radius: 999px;
+            font-size: 0.75rem; font-weight: bold;
+        }
+        .badge-verificacao {
+            background: #D1FAE5; color: #065F46;
+            padding: 2px 10px; border-radius: 999px;
+            font-size: 0.75rem; font-weight: bold;
+        }
+        .badge-padrao {
+            background: #DBEAFE; color: #1E40AF;
+            padding: 2px 10px; border-radius: 999px;
+            font-size: 0.75rem; font-weight: bold;
+        }
+
+        .aviso-dia-especial {
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+            border-left: 4px solid #F59E0B;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .contador-rapido {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #F3F4F6;
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .contador-btn {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            font-size: 1.5rem; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform 0.1s;
+            border: none;
+        }
+        .contador-btn:active { transform: scale(0.9); }
+        .contador-valor {
+            font-size: 2.5rem; font-weight: bold;
+            min-width: 60px; text-align: center;
+            color: var(--cor-escuro);
         }
     </style>
 </head>
 <body class="bg-gray-50">
-    
-    <!-- Modal "Não Deu Tempo" -->
+
+    <!-- Modal Não Deu Tempo -->
     <div id="modalNaoDeuTempo" class="modal">
         <div class="modal-content">
             <div class="bg-cm-escuro text-white p-6 rounded-t-xl">
@@ -165,8 +185,8 @@
             </div>
         </div>
     </div>
-    
-    <!-- Modal de Pausa -->
+
+    <!-- Modal Pausa -->
     <div id="modalPausa" class="modal">
         <div class="modal-content">
             <div class="bg-cm-escuro text-white p-6 rounded-t-xl">
@@ -187,42 +207,79 @@
     <script>
         const SUPABASE_URL = 'https://awppfluuudipkgrtrgyw.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cHBmbHV1dWRpcGtncnRyZ3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4MTk5MDYsImV4cCI6MjA4NTM5NTkwNn0.L7EjW4ytXMbVlGxhsMb8Hh77cjRpPr5Y-KG0dR4e35A';
-        
+
         if (!window.__cmSupabaseClient) {
             window.__cmSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
         var supabase = window.__cmSupabaseClient;
 
+        // =============================================
+        // UTILITÁRIOS DE DATA
+        // =============================================
+        function getDiaSemanaAtual() {
+            const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+            return dias[new Date().getDay()];
+        }
+
+        function isDiaEspecial() {
+            const dia = getDiaSemanaAtual();
+            return dia === 'segunda' || dia === 'quarta';
+        }
+
+        function getNomeDia() {
+            const nomes = {
+                'domingo': 'Domingo', 'segunda': 'Segunda-feira',
+                'terca': 'Terça-feira', 'quarta': 'Quarta-feira',
+                'quinta': 'Quinta-feira', 'sexta': 'Sexta-feira', 'sabado': 'Sábado'
+            };
+            return nomes[getDiaSemanaAtual()];
+        }
+
+        function filtrarTarefasPorDia(tarefas) {
+            const diaAtual = getDiaSemanaAtual();
+            return tarefas.filter(t => {
+                if (!t.dias_ocultar || t.dias_ocultar.length === 0) return true;
+                return !t.dias_ocultar.includes(diaAtual);
+            });
+        }
+
+        // =============================================
+        // CLASSE PRINCIPAL
+        // =============================================
         class RotinaSequencial {
             constructor() {
                 this.currentUser = null;
                 this.isAdmin = false;
-                this.currentPage = 'dashboard'; // dashboard, rotina, metricas, admin-geral, admin-consultor
-                this.periodo = null; // 'manha' ou 'tarde'
+                this.periodo = null;
                 this.tarefas = [];
                 this.tarefaAtualIndex = 0;
                 this.regras = [];
-                this.statusPlataformas = { whatsapp_ok: false, ll_ok: false, rotina_ok: true };
                 this.metricas = {
                     total_tarefas: 0,
                     concluidas: 0,
                     nao_deu_tempo: 0,
                     leads_atendidos: 0
                 };
-                this.timerLeadNovo = null;
-                this.ultimoLeadTimestamp = null;
+                this.timerInterval = null;
+                this.timerSegundos = 0;
+                this.timerAtivo = false;
                 this.autoSaveInterval = null;
                 this.metricasHistorico = [];
                 this.rankingConsultores = [];
                 this.consultorSelecionado = null;
-                
+                this.statusPlataformas = { whatsapp_ok: false, ll_ok: false, rotina_ok: true };
+
                 this.verificarSessao();
             }
 
+            // =============================================
+            // SESSÃO E AUTENTICAÇÃO
+            // =============================================
             async verificarSessao() {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session) {
                     this.currentUser = session.user;
+                    await this.verificarAdmin();
                     await this.carregarDados();
                     this.iniciarAutoSave();
                     this.renderDashboard();
@@ -231,8 +288,50 @@
                 }
             }
 
+            async verificarAdmin() {
+                const { data } = await supabase
+                    .from('user_roles')
+                    .select('is_admin')
+                    .eq('user_id', this.currentUser.id)
+                    .single();
+                this.isAdmin = data?.is_admin || false;
+            }
+
+            async fazerLogin() {
+                const email = document.getElementById('loginEmail').value;
+                const senha = document.getElementById('loginSenha').value;
+                const btn = document.getElementById('btnLogin');
+                btn.textContent = 'Entrando...';
+                btn.disabled = true;
+
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+
+                if (error) {
+                    alert('❌ Erro ao fazer login: ' + error.message);
+                    btn.textContent = 'Entrar';
+                    btn.disabled = false;
+                    return;
+                }
+
+                this.currentUser = data.user;
+                await this.verificarAdmin();
+                await this.carregarDados();
+                this.iniciarAutoSave();
+                this.renderDashboard();
+            }
+
+            async logout() {
+                if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
+                this.pararTimer();
+                await supabase.auth.signOut();
+                this.currentUser = null;
+                this.renderLogin();
+            }
+
+            // =============================================
+            // CARREGAR DADOS
+            // =============================================
             async carregarDados() {
-                // Carregar regras
                 const { data: regras } = await supabase
                     .from('regras_lembretes')
                     .select('*')
@@ -240,7 +339,6 @@
                     .order('ordem');
                 this.regras = regras || [];
 
-                // Carregar status plataformas
                 const hoje = new Date().toISOString().split('T')[0];
                 const { data: status } = await supabase
                     .from('status_plataformas')
@@ -248,18 +346,10 @@
                     .eq('user_id', this.currentUser.id)
                     .eq('data', hoje)
                     .single();
-                
-                if (status) {
-                    this.statusPlataformas = status;
-                }
+                if (status) this.statusPlataformas = status;
 
-                // Carregar métricas históricas (últimos 7 dias)
                 await this.carregarMetricasHistorico();
-
-                // Se for admin, carregar ranking
-                if (this.isAdmin) {
-                    await this.carregarRankingConsultores();
-                }
+                if (this.isAdmin) await this.carregarRankingConsultores();
             }
 
             async carregarMetricasHistorico() {
@@ -269,38 +359,146 @@
                     .eq('user_id', this.currentUser.id)
                     .gte('data', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
                     .order('data', { ascending: false });
-
-                if (!error && data) {
-                    this.metricasHistorico = data;
-                }
+                if (!error && data) this.metricasHistorico = data;
             }
 
             async carregarRankingConsultores() {
                 const { data, error } = await supabase
                     .from('vw_ranking_consultores')
                     .select('*');
+                if (!error && data) this.rankingConsultores = data;
+            }
 
-                if (!error && data) {
-                    this.rankingConsultores = data;
+            iniciarAutoSave() {
+                if (this.autoSaveInterval) clearInterval(this.autoSaveInterval);
+                this.autoSaveInterval = setInterval(() => {
+                    if (this.periodo && this.tarefas.length > 0) this.salvarProgresso();
+                }, 30000);
+            }
+
+            // =============================================
+            // TIMER 5 MINUTOS
+            // =============================================
+            iniciarTimer() {
+                this.pararTimer();
+                this.timerSegundos = 300; // 5 minutos
+                this.timerAtivo = true;
+                this.atualizarDisplayTimer();
+                this.timerInterval = setInterval(() => {
+                    this.timerSegundos--;
+                    this.atualizarDisplayTimer();
+                    if (this.timerSegundos <= 0) {
+                        this.pararTimer();
+                        this.alertaTimer();
+                    }
+                }, 1000);
+            }
+
+            pararTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+                this.timerAtivo = false;
+            }
+
+            resetarTimer() {
+                this.pararTimer();
+                this.timerSegundos = 300;
+                this.timerAtivo = true;
+                this.atualizarDisplayTimer();
+                this.timerInterval = setInterval(() => {
+                    this.timerSegundos--;
+                    this.atualizarDisplayTimer();
+                    if (this.timerSegundos <= 0) {
+                        this.pararTimer();
+                        this.alertaTimer();
+                    }
+                }, 1000);
+            }
+
+            atualizarDisplayTimer() {
+                const el = document.getElementById('timerDisplay');
+                if (!el) return;
+                const min = Math.floor(this.timerSegundos / 60);
+                const seg = this.timerSegundos % 60;
+                el.textContent = `${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}`;
+
+                const circle = document.getElementById('timerCircle');
+                if (!circle) return;
+                circle.className = 'timer-circle';
+                if (this.timerSegundos > 180) {
+                    circle.classList.add('timer-ok');
+                } else if (this.timerSegundos > 60) {
+                    circle.classList.add('timer-warning');
+                } else {
+                    circle.classList.add('timer-danger');
                 }
             }
 
+            alertaTimer() {
+                const el = document.getElementById('timerDisplay');
+                if (el) el.textContent = '00:00';
+                const circle = document.getElementById('timerCircle');
+                if (circle) {
+                    circle.className = 'timer-circle timer-danger';
+                    circle.innerHTML = '⚠️';
+                }
+                // Vibração se disponível
+                if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+            }
+
+            // =============================================
+            // CONTADOR RÁPIDO
+            // =============================================
+            incrementarContador() {
+                const tarefa = this.tarefas[this.tarefaAtualIndex];
+                tarefa.contador_valor = (tarefa.contador_valor || 0) + 1;
+                const el = document.getElementById('contadorValorDisplay');
+                if (el) el.textContent = tarefa.contador_valor;
+                this.atualizarMetricasLeads();
+            }
+
+            decrementarContador() {
+                const tarefa = this.tarefas[this.tarefaAtualIndex];
+                if (tarefa.contador_valor > 0) {
+                    tarefa.contador_valor--;
+                    const el = document.getElementById('contadorValorDisplay');
+                    if (el) el.textContent = tarefa.contador_valor;
+                    this.atualizarMetricasLeads();
+                }
+            }
+
+            atualizarMetricasLeads() {
+                if (this.tarefas[this.tarefaAtualIndex].categoria === 'atendimento') {
+                    this.metricas.leads_atendidos = this.tarefas
+                        .filter(t => t.categoria === 'atendimento' && t.contador_valor)
+                        .reduce((sum, t) => sum + (t.contador_valor || 0), 0);
+                    const el = document.getElementById('metricaLeads');
+                    if (el) el.textContent = this.metricas.leads_atendidos;
+                }
+            }
+
+            // =============================================
+            // ROTINA
+            // =============================================
             async iniciarRotina(periodo) {
                 this.periodo = periodo;
-                
-                // Carregar templates de tarefas
+
                 const { data: templates } = await supabase
                     .from('rotina_templates')
                     .select('*')
                     .eq('periodo', periodo)
                     .order('ordem');
-                
+
                 if (!templates || templates.length === 0) {
                     alert('❌ Nenhuma tarefa encontrada para este período!');
                     return;
                 }
 
-                // Verificar se já existe progresso salvo
+                // Filtrar tarefas pelo dia da semana
+                const tarefasFiltradas = filtrarTarefasPorDia(templates);
+
                 const hoje = new Date().toISOString().split('T')[0];
                 const { data: progressoSalvo } = await supabase
                     .from('progresso_diario')
@@ -310,41 +508,43 @@
                     .eq('periodo', periodo)
                     .single();
 
-                if (progressoSalvo && progressoSalvo.status === 'em_andamento') {
-                    // Continuar de onde parou
-                    this.tarefas = progressoSalvo.progresso.tarefas;
-                    this.tarefaAtualIndex = progressoSalvo.tarefa_atual_index;
-                    this.metricas = progressoSalvo.metricas;
-                } else {
-                    // Iniciar nova rotina
-                    this.tarefas = templates.map((t, index) => ({
-                        ...t,
-                        index: index,
-                        status: 'pendente', // pendente, concluida, nao_deu_tempo
-                        motivo_nao_concluida: null,
-                        horario_conclusao: null,
-                        contador_valor: 0
-                    }));
-                    this.tarefaAtualIndex = 0;
-                    this.metricas = {
-                        total_tarefas: this.tarefas.length,
-                        concluidas: 0,
-                        nao_deu_tempo: 0,
-                        leads_atendidos: 0
-                    };
-
-                    // Salvar início
-                    await supabase.from('progresso_diario').insert({
-                        user_id: this.currentUser.id,
-                        data: hoje,
-                        periodo: periodo,
-                        tarefa_atual_index: 0,
-                        progresso: { tarefas: this.tarefas },
-                        metricas: this.metricas,
-                        status: 'em_andamento',
-                        iniciado_em: new Date().toISOString()
-                    });
+                if (progressoSalvo && (progressoSalvo.status === 'em_andamento' || progressoSalvo.status === 'pausado')) {
+                    const continuar = confirm('Você tem uma rotina em andamento! Deseja continuar de onde parou?');
+                    if (continuar) {
+                        this.tarefas = progressoSalvo.progresso.tarefas;
+                        this.tarefaAtualIndex = progressoSalvo.tarefa_atual_index;
+                        this.metricas = progressoSalvo.metricas;
+                        this.renderTarefaAtual();
+                        return;
+                    }
                 }
+
+                this.tarefas = tarefasFiltradas.map((t, index) => ({
+                    ...t,
+                    index,
+                    status: 'pendente',
+                    motivo_nao_concluida: null,
+                    horario_conclusao: null,
+                    contador_valor: 0
+                }));
+                this.tarefaAtualIndex = 0;
+                this.metricas = {
+                    total_tarefas: this.tarefas.length,
+                    concluidas: 0,
+                    nao_deu_tempo: 0,
+                    leads_atendidos: 0
+                };
+
+                await supabase.from('progresso_diario').upsert({
+                    user_id: this.currentUser.id,
+                    data: hoje,
+                    periodo,
+                    tarefa_atual_index: 0,
+                    progresso: { tarefas: this.tarefas },
+                    metricas: this.metricas,
+                    status: 'em_andamento',
+                    iniciado_em: new Date().toISOString()
+                }, { onConflict: 'user_id,data,periodo' });
 
                 this.renderTarefaAtual();
             }
@@ -353,11 +553,82 @@
                 const tarefa = this.tarefas[this.tarefaAtualIndex];
                 tarefa.status = 'concluida';
                 tarefa.horario_conclusao = new Date().toISOString();
-                
                 this.metricas.concluidas++;
-                
+                this.pararTimer();
                 await this.salvarProgresso();
                 await this.proximaTarefa();
+            }
+
+            async proximaTarefa() {
+                if (this.tarefaAtualIndex < this.tarefas.length - 1) {
+                    this.tarefaAtualIndex++;
+                    await this.salvarProgresso();
+                    this.renderTarefaAtual();
+                } else {
+                    await this.finalizarRotina();
+                }
+            }
+
+            async tarefaAnterior() {
+                if (this.tarefaAtualIndex > 0) {
+                    this.tarefaAtualIndex--;
+                    this.pararTimer();
+                    await this.salvarProgresso();
+                    this.renderTarefaAtual();
+                }
+            }
+
+            async irParaTarefa(index) {
+                this.tarefaAtualIndex = index;
+                this.pararTimer();
+                await this.salvarProgresso();
+                this.renderTarefaAtual();
+            }
+
+            async salvarProgresso() {
+                const hoje = new Date().toISOString().split('T')[0];
+                await supabase.from('progresso_diario').upsert({
+                    user_id: this.currentUser.id,
+                    data: hoje,
+                    periodo: this.periodo,
+                    tarefa_atual_index: this.tarefaAtualIndex,
+                    progresso: { tarefas: this.tarefas },
+                    metricas: this.metricas,
+                    status: 'em_andamento'
+                }, { onConflict: 'user_id,data,periodo' });
+            }
+
+            async finalizarRotina() {
+                const hoje = new Date().toISOString().split('T')[0];
+                this.pararTimer();
+                await supabase.from('progresso_diario').update({
+                    status: 'finalizado',
+                    finalizado_em: new Date().toISOString(),
+                    metricas: this.metricas
+                })
+                .eq('user_id', this.currentUser.id)
+                .eq('data', hoje)
+                .eq('periodo', this.periodo);
+                this.renderResumo();
+            }
+
+            abrirModalPausa() {
+                document.getElementById('modalPausa').classList.add('active');
+            }
+
+            fecharModalPausa() {
+                document.getElementById('modalPausa').classList.remove('active');
+            }
+
+            async confirmarPausa() {
+                const hoje = new Date().toISOString().split('T')[0];
+                this.pararTimer();
+                await supabase.from('progresso_diario').update({ status: 'pausado' })
+                    .eq('user_id', this.currentUser.id)
+                    .eq('data', hoje)
+                    .eq('periodo', this.periodo);
+                this.fecharModalPausa();
+                this.renderDashboard();
             }
 
             abrirModalNaoDeuTempo() {
@@ -374,7 +645,6 @@
                 conteudo.innerHTML = `
                     <div class="space-y-4">
                         <p class="text-gray-700 font-semibold">Selecione o motivo:</p>
-                        
                         <div class="space-y-2">
                             <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
                                 <input type="radio" name="motivo" value="Muitos atendimentos" class="w-5 h-5">
@@ -397,66 +667,41 @@
                                 <span>✏️ Outro (especificar)</span>
                             </label>
                         </div>
-
-                        <div id="outroMotivoContainer" style="display: none;">
+                        <div id="outroMotivoContainer" style="display:none;">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">📝 Detalhe o motivo:</label>
-                            <textarea 
-                                id="outroMotivoTexto" 
-                                rows="3"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-cm-turquesa"
+                            <textarea id="outroMotivoTexto" rows="3"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none"
                                 placeholder="Digite o motivo específico..."></textarea>
                         </div>
-
                         <div class="flex gap-3 mt-6">
-                            <button onclick="app.confirmarNaoDeuTempo()" class="flex-1 btn-danger">
-                                Confirmar e Avançar
-                            </button>
-                            <button onclick="app.fecharModalNaoDeuTempo()" class="flex-1 btn-secondary">
-                                Cancelar
-                            </button>
+                            <button onclick="app.confirmarNaoDeuTempo()" class="flex-1 btn-danger">Confirmar e Avançar</button>
+                            <button onclick="app.fecharModalNaoDeuTempo()" class="flex-1 btn-secondary">Cancelar</button>
                         </div>
                     </div>
                 `;
-
-                // Listener para mostrar campo "outro"
                 document.querySelectorAll('input[name="motivo"]').forEach(radio => {
                     radio.addEventListener('change', (e) => {
-                        const container = document.getElementById('outroMotivoContainer');
-                        if (e.target.value === 'outro') {
-                            container.style.display = 'block';
-                        } else {
-                            container.style.display = 'none';
-                        }
+                        document.getElementById('outroMotivoContainer').style.display =
+                            e.target.value === 'outro' ? 'block' : 'none';
                     });
                 });
             }
 
             async confirmarNaoDeuTempo() {
                 const motivoSelecionado = document.querySelector('input[name="motivo"]:checked');
-                
-                if (!motivoSelecionado) {
-                    alert('❌ Selecione um motivo!');
-                    return;
-                }
-
+                if (!motivoSelecionado) { alert('❌ Selecione um motivo!'); return; }
                 let motivo = motivoSelecionado.value;
-                
                 if (motivo === 'outro') {
-                    const outroTexto = document.getElementById('outroMotivoTexto').value.trim();
-                    if (!outroTexto) {
-                        alert('❌ Digite o motivo específico!');
-                        return;
-                    }
-                    motivo = outroTexto;
+                    const txt = document.getElementById('outroMotivoTexto').value.trim();
+                    if (!txt) { alert('❌ Digite o motivo específico!'); return; }
+                    motivo = txt;
                 }
-
                 const tarefa = this.tarefas[this.tarefaAtualIndex];
                 tarefa.status = 'nao_deu_tempo';
                 tarefa.motivo_nao_concluida = motivo;
                 tarefa.horario_conclusao = new Date().toISOString();
-                
                 this.metricas.nao_deu_tempo++;
-                
+                this.pararTimer();
                 this.fecharModalNaoDeuTempo();
                 await this.salvarProgresso();
                 await this.proximaTarefa();
@@ -464,178 +709,29 @@
 
             refazerTarefa() {
                 const tarefa = this.tarefas[this.tarefaAtualIndex];
-                
                 if (tarefa.status === 'nao_deu_tempo') {
-                    // Resetar tarefa
                     tarefa.status = 'pendente';
                     tarefa.motivo_nao_concluida = null;
                     tarefa.horario_conclusao = null;
-                    
-                    // Decrementar métrica
                     this.metricas.nao_deu_tempo--;
-                    
-                    // Re-renderizar
                     this.renderTarefaAtual();
                 }
-            }
-
-            async irParaTarefa(index) {
-                // Permitir navegar para qualquer tarefa
-                this.tarefaAtualIndex = index;
-                await this.salvarProgresso();
-                this.renderTarefaAtual();
-            }
-
-            async proximaTarefa() {
-                if (this.tarefaAtualIndex < this.tarefas.length - 1) {
-                    this.tarefaAtualIndex++;
-                    await this.salvarProgresso();
-                    this.renderTarefaAtual();
-                } else {
-                    await this.finalizarRotina();
-                }
-            }
-
-            async tarefaAnterior() {
-                if (this.tarefaAtualIndex > 0) {
-                    this.tarefaAtualIndex--;
-                    await this.salvarProgresso();
-                    this.renderTarefaAtual();
-                }
-            }
-
-            async salvarProgresso() {
-                const hoje = new Date().toISOString().split('T')[0];
-                
-                await supabase
-                    .from('progresso_diario')
-                    .upsert({
-                        user_id: this.currentUser.id,
-                        data: hoje,
-                        periodo: this.periodo,
-                        tarefa_atual_index: this.tarefaAtualIndex,
-                        progresso: { tarefas: this.tarefas },
-                        metricas: this.metricas,
-                        status: 'em_andamento'
-                    }, {
-                        onConflict: 'user_id,data,periodo'
-                    });
-            }
-
-            async finalizarRotina() {
-                const hoje = new Date().toISOString().split('T')[0];
-                
-                await supabase
-                    .from('progresso_diario')
-                    .update({
-                        status: 'finalizado',
-                        finalizado_em: new Date().toISOString(),
-                        metricas: this.metricas
-                    })
-                    .eq('user_id', this.currentUser.id)
-                    .eq('data', hoje)
-                    .eq('periodo', this.periodo);
-
-                this.renderResumo();
-            }
-
-            abrirModalPausa() {
-                document.getElementById('modalPausa').classList.add('active');
-            }
-
-            fecharModalPausa() {
-                document.getElementById('modalPausa').classList.remove('active');
-            }
-
-            async confirmarPausa() {
-                const hoje = new Date().toISOString().split('T')[0];
-                
-                await supabase
-                    .from('progresso_diario')
-                    .update({ status: 'pausado' })
-                    .eq('user_id', this.currentUser.id)
-                    .eq('data', hoje)
-                    .eq('periodo', this.periodo);
-
-                this.fecharModalPausa();
-                this.renderDashboard();
-            }
-
-            iniciarAutoSave() {
-                if (this.autoSaveInterval) {
-                    clearInterval(this.autoSaveInterval);
-                }
-                this.autoSaveInterval = setInterval(() => {
-                    if (this.periodo && this.tarefas.length > 0) {
-                        this.salvarProgresso();
-                    }
-                }, 30000); // Auto-save a cada 30 segundos
-            }
-
-            async logout() {
-                if (this.autoSaveInterval) {
-                    clearInterval(this.autoSaveInterval);
-                }
-                await supabase.auth.signOut();
-                this.currentUser = null;
-                this.renderLogin();
             }
 
             calcularProgresso() {
                 const total = this.tarefas.length;
-                const realizadas = this.tarefas.filter(t => 
+                if (total === 0) return 0;
+                const realizadas = this.tarefas.filter(t =>
                     t.status === 'concluida' || t.status === 'nao_deu_tempo'
                 ).length;
                 return Math.round((realizadas / total) * 100);
             }
 
-            renderSidebarRegras() {
-                return `
-                    <div class="sidebar-regras">
-                        <h3 class="text-lg font-bold text-cm-escuro mb-4">⚠️ REGRAS DO DIA</h3>
-                        <div class="space-y-3">
-                            ${this.regras.filter(r => r.tipo === 'regra').map(regra => `
-                                <div class="regra-item bg-gray-50 p-3 rounded-lg">
-                                    <p class="text-sm font-semibold text-gray-800">
-                                        ${regra.icone} ${regra.texto}
-                                    </p>
-                                </div>
-                            `).join('')}
-                        </div>
-
-                        <h3 class="text-lg font-bold text-cm-escuro mt-6 mb-4">💡 LEMBRETES</h3>
-                        <div class="space-y-3">
-                            ${this.regras.filter(r => r.tipo === 'lembrete').map(lembrete => `
-                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                                    <p class="text-sm text-gray-700">
-                                        ${lembrete.icone} ${lembrete.texto}
-                                    </p>
-                                </div>
-                            `).join('')}
-                        </div>
-
-                        <h3 class="text-lg font-bold text-cm-escuro mt-6 mb-4">📲 PLATAFORMAS</h3>
-                        <div class="space-y-2">
-                            <div class="flex justify-between items-center p-2 rounded ${this.statusPlataformas.whatsapp_ok ? 'bg-green-50' : 'bg-red-50'}">
-                                <span class="text-sm font-semibold">WhatsApp</span>
-                                <span>${this.statusPlataformas.whatsapp_ok ? '✅' : '❌'}</span>
-                            </div>
-                            <div class="flex justify-between items-center p-2 rounded ${this.statusPlataformas.ll_ok ? 'bg-green-50' : 'bg-red-50'}">
-                                <span class="text-sm font-semibold">LL (CRM)</span>
-                                <span>${this.statusPlataformas.ll_ok ? '✅' : '❌'}</span>
-                            </div>
-                            <div class="flex justify-between items-center p-2 rounded bg-green-50">
-                                <span class="text-sm font-semibold">Rotina</span>
-                                <span>✅</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
+            // =============================================
+            // RENDERS
+            // =============================================
             renderLogin() {
-                const app = document.getElementById('app');
-                app.innerHTML = `
+                document.getElementById('app').innerHTML = `
                     <div class="min-h-screen bg-cm-escuro flex items-center justify-center p-4">
                         <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
                             <div class="flex justify-center mb-8">
@@ -651,62 +747,42 @@
                                     </div>
                                 </div>
                             </div>
-                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Rotina do Consultor v3.0</h1>
-                            <p class="text-gray-600 text-center mb-6 text-sm">🎯 Uma tarefa por vez | ⏱️ Timer 5min | 📊 Métricas</p>
-                            
-                            <div>
-                                <input type="email" id="loginEmail" placeholder="Email" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
-                                <input type="password" id="loginSenha" placeholder="Senha" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
-                                <button onclick="app.fazerLogin()" class="w-full btn-primary">Entrar</button>
-                            </div>
+                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Rotina do Consultor v3.1</h1>
+                            <p class="text-gray-500 text-center mb-6 text-sm">🎯 Uma tarefa por vez · ⏱️ Timer 5min · 📊 Métricas</p>
+                            <input type="email" id="loginEmail" placeholder="Email"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                            <input type="password" id="loginSenha" placeholder="Senha"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-6 focus:outline-none focus:border-cm-turquesa"
+                                onkeypress="if(event.key==='Enter') app.fazerLogin()" />
+                            <button id="btnLogin" onclick="app.fazerLogin()" class="w-full btn-primary py-3">Entrar</button>
                         </div>
                     </div>
                 `;
             }
 
-            async fazerLogin() {
-                const email = document.getElementById('loginEmail').value;
-                const senha = document.getElementById('loginSenha').value;
-                
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: senha
-                });
-
-                if (error) {
-                    alert('❌ Erro ao fazer login: ' + error.message);
-                    return;
-                }
-
-                this.currentUser = data.user;
-                await this.carregarDados();
-                this.iniciarAutoSave();
-                this.renderDashboard();
-            }
-
             renderDashboard() {
-                const app = document.getElementById('app');
                 const nomeUsuario = this.currentUser.user_metadata?.nome || this.currentUser.email.split('@')[0];
                 const horaAtual = new Date().getHours();
                 const periodo = horaAtual < 13 ? 'manha' : 'tarde';
                 const periodoTexto = periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde';
+                const diaEspecial = isDiaEspecial();
+                const nomeDia = getNomeDia();
 
-                app.innerHTML = `
+                document.getElementById('app').innerHTML = `
                     <div class="min-h-screen bg-gray-50">
                         <div class="bg-cm-escuro text-white shadow-lg">
                             <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
                                 <div>
-                                    <h1 class="text-xl font-bold">C&M Rotina v3.0</h1>
-                                    <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
+                                    <h1 class="text-xl font-bold">C&M Rotina v3.1</h1>
+                                    <p class="text-xs text-gray-300">Olá, ${nomeUsuario}! · ${nomeDia}</p>
                                 </div>
                                 <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
                             </div>
                         </div>
 
-                        <!-- Menu de Navegação -->
                         <div class="bg-white shadow border-b">
                             <div class="max-w-4xl mx-auto flex gap-2 px-4 py-3 overflow-x-auto">
-                                <button onclick="app.currentPage = 'dashboard'; app.renderDashboard();" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-cm-turquesa text-white">
+                                <button class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-cm-turquesa text-white">
                                     🏠 Início
                                 </button>
                                 <button onclick="app.renderMetricasIndividuais()" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300">
@@ -721,22 +797,33 @@
                         </div>
 
                         <div class="max-w-4xl mx-auto px-4 py-8">
-                            <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
-                                <h2 class="text-3xl font-bold text-cm-escuro mb-4 text-center">
-                                    ${periodoTexto}
-                                </h2>
-                                <p class="text-gray-600 text-center mb-8">
-                                    Pronto para iniciar sua rotina?
-                                </p>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            ${diaEspecial ? `
+                                <div class="aviso-dia-especial mb-6">
+                                    <div class="flex items-start gap-3">
+                                        <span class="text-2xl">📚</span>
+                                        <div>
+                                            <p class="font-bold text-yellow-800 text-lg">Hoje é ${nomeDia} — Dia de Treinamento</p>
+                                            <p class="text-yellow-700 mt-1">As tarefas de <strong>prospecção</strong> e <strong>remarketing</strong> estão desativadas hoje. Foque nos atendimentos ativos, follow-up e atualização do kanban.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
+                                <h2 class="text-3xl font-bold text-cm-escuro mb-2 text-center">${periodoTexto}</h2>
+                                <p class="text-gray-500 text-center mb-8">Pronto para iniciar sua rotina?</p>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                                     <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
-                                        <p class="font-semibold text-blue-800">📋 Tarefas</p>
-                                        <p class="text-2xl font-bold text-blue-900">${periodo === 'manha' ? '12' : '20'}</p>
+                                        <p class="font-semibold text-blue-800">📋 Tarefas do Período</p>
+                                        <p class="text-2xl font-bold text-blue-900">${periodo === 'manha' ? (diaEspecial ? '11' : '11') : (diaEspecial ? '14' : '16')}</p>
+                                        ${diaEspecial ? '<p class="text-xs text-blue-600">2 tarefas ocultas hoje</p>' : ''}
                                     </div>
                                     <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded">
-                                        <p class="font-semibold text-green-800">⏱️ Tempo Estimado</p>
-                                        <p class="text-2xl font-bold text-green-900">${periodo === 'manha' ? '~2h' : '~3h'}</p>
+                                        <p class="font-semibold text-green-800">🔴 Prioridade Máxima</p>
+                                        <p class="text-sm font-bold text-green-900">Leads do quiz no WhatsApp</p>
+                                        <p class="text-xs text-green-700">Atender em até 5 minutos</p>
                                     </div>
                                 </div>
 
@@ -745,7 +832,6 @@
                                 </button>
 
                                 ${!this.isAdmin ? `
-                                    <!-- BOTÃO SECRETO ADMIN - Só aparece se NÃO for admin -->
                                     <button onclick="app.abrirModalAdmin()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg mt-4 text-sm transition">
                                         👑 Ativar Modo Admin
                                     </button>
@@ -753,14 +839,15 @@
                             </div>
 
                             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
-                                <h3 class="font-bold text-yellow-800 mb-2">💡 Como funciona:</h3>
+                                <h3 class="font-bold text-yellow-800 mb-3">💡 Como funciona:</h3>
                                 <ul class="text-gray-700 space-y-2 text-sm">
                                     <li>✅ Uma tarefa por vez na tela</li>
-                                    <li>⏱️ Timer de 5 minutos para leads novos</li>
+                                    <li>⏱️ Timer de 5 minutos nas tarefas prioritárias</li>
+                                    <li>➕ Contador rápido de leads atendidos</li>
                                     <li>📊 Métricas em tempo real</li>
-                                    <li>💾 Salvamento automático do progresso</li>
+                                    <li>💾 Salvamento automático a cada 30 segundos</li>
                                     <li>❌ Opção "Não deu tempo" com justificativa</li>
-                                    <li>📈 Acompanhe seu desempenho no menu acima</li>
+                                    <li>📅 Tarefas ajustadas automaticamente por dia da semana</li>
                                 </ul>
                             </div>
                         </div>
@@ -771,40 +858,38 @@
             }
 
             renderTarefaAtual() {
-                const app = document.getElementById('app');
                 const tarefa = this.tarefas[this.tarefaAtualIndex];
                 const progresso = this.calcularProgresso();
                 const periodoTexto = this.periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde';
-
-                // Verificar status da tarefa
                 const estaConcluida = tarefa.status === 'concluida';
                 const naoDeuTempo = tarefa.status === 'nao_deu_tempo';
-                const estaPendente = tarefa.status === 'pendente';
 
-                // Definir cor baseado no tipo e status
-                let corTipo = 'bg-blue-500';
-                if (estaConcluida) {
-                    corTipo = 'bg-green-500';
-                } else if (naoDeuTempo) {
-                    corTipo = 'bg-orange-500';
-                } else if (tarefa.tipo === 'prioritaria') {
-                    corTipo = 'bg-red-500';
-                } else if (tarefa.tipo === 'verificacao') {
-                    corTipo = 'bg-green-500';
-                }
+                let corHeader = 'bg-blue-500';
+                if (estaConcluida) corHeader = 'bg-green-500';
+                else if (naoDeuTempo) corHeader = 'bg-orange-500';
+                else if (tarefa.tipo === 'prioritaria') corHeader = 'bg-red-600';
+                else if (tarefa.tipo === 'verificacao') corHeader = 'bg-green-600';
 
-                app.innerHTML = `
+                let badgeHtml = '';
+                if (tarefa.tipo === 'prioritaria') badgeHtml = '<span class="badge-prioritaria">🔴 PRIORIDADE</span>';
+                else if (tarefa.tipo === 'verificacao') badgeHtml = '<span class="badge-verificacao">✅ VERIFICAÇÃO</span>';
+                else badgeHtml = '<span class="badge-padrao">📋 TAREFA</span>';
+
+                // Iniciar timer automaticamente em tarefas prioritárias com timer
+                const deveIniciarTimer = tarefa.tem_timer && !estaConcluida && !naoDeuTempo;
+
+                document.getElementById('app').innerHTML = `
                     <div class="min-h-screen bg-gray-50">
                         <!-- Header -->
                         <div class="bg-cm-escuro text-white shadow-lg">
                             <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
                                 <div>
-                                    <h1 class="text-xl font-bold">${periodoTexto} - Tarefa ${this.tarefaAtualIndex + 1} de ${this.tarefas.length}</h1>
-                                    <p class="text-xs text-gray-300">⏰ ${tarefa.horario_inicio || 'Horário livre'}</p>
+                                    <h1 class="text-xl font-bold">${periodoTexto} · ${getNomeDia()}</h1>
+                                    <p class="text-xs text-gray-300">Tarefa ${this.tarefaAtualIndex + 1} de ${this.tarefas.length}</p>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="app.abrirModalPausa()" class="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded-lg text-sm">⏸️ Pausar</button>
-                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                    <button onclick="app.abrirModalPausa()" class="bg-yellow-500 hover:bg-yellow-600 px-3 py-2 rounded-lg text-sm">⏸️ Pausar</button>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-3 py-2 rounded-lg text-sm">🚪 Sair</button>
                                 </div>
                             </div>
                         </div>
@@ -812,7 +897,7 @@
                         <!-- Barra de Progresso -->
                         <div class="bg-white shadow">
                             <div class="max-w-6xl mx-auto px-4 py-3">
-                                <div class="flex justify-between items-center mb-2">
+                                <div class="flex justify-between items-center mb-1">
                                     <span class="text-sm font-semibold text-gray-700">Progresso Geral</span>
                                     <span class="text-sm font-bold text-cm-turquesa">${progresso}%</span>
                                 </div>
@@ -820,84 +905,64 @@
                                     <div class="progress-bar bg-cm-verde h-3 rounded-full" style="width: ${progresso}%"></div>
                                 </div>
                                 <div class="flex justify-between text-xs text-gray-500 mt-1">
-                                    <span>✅ ${this.metricas.concluidas} concluídas</span>
+                                    <span>✅ <span id="metricaConcluidas">${this.metricas.concluidas}</span> concluídas</span>
                                     <span>❌ ${this.metricas.nao_deu_tempo} não deram tempo</span>
-                                    <span>⏭️ ${this.tarefas.length - this.tarefaAtualIndex} restantes</span>
+                                    <span>👤 <span id="metricaLeads">${this.metricas.leads_atendidos}</span> leads atendidos</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Conteúdo Principal -->
-                        <div class="max-w-6xl mx-auto px-4 py-8 pr-[320px]">
-                            
-                            <!-- Mapa de Progresso -->
-                            <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
+                        <!-- Conteúdo -->
+                        <div class="max-w-6xl mx-auto px-4 py-6 pr-4 md:pr-[320px]">
+
+                            <!-- Mapa de Tarefas -->
+                            <div class="bg-white rounded-lg shadow p-4 mb-6">
                                 <h3 class="text-sm font-bold text-gray-700 mb-3">Mapa de Tarefas:</h3>
                                 <div class="flex flex-wrap gap-2">
                                     ${this.tarefas.map((t, index) => {
-                                        let corIndicador = 'bg-gray-300'; // Pendente
-                                        let iconeStatus = '';
-                                        
-                                        if (t.status === 'concluida') {
-                                            corIndicador = 'bg-green-500';
-                                            iconeStatus = '✓';
-                                        } else if (t.status === 'nao_deu_tempo') {
-                                            corIndicador = 'bg-orange-400';
-                                            iconeStatus = '⚠';
-                                        }
-                                        
+                                        let cor = 'bg-gray-300';
+                                        let icone = index + 1;
+                                        if (t.status === 'concluida') { cor = 'bg-green-500'; icone = '✓'; }
+                                        else if (t.status === 'nao_deu_tempo') { cor = 'bg-orange-400'; icone = '⚠'; }
+                                        else if (t.tipo === 'prioritaria') cor = 'bg-red-200';
                                         const estaAtual = index === this.tarefaAtualIndex;
-                                        
                                         return `
-                                            <button 
-                                                onclick="app.irParaTarefa(${index})"
-                                                class="${corIndicador} ${estaAtual ? 'ring-4 ring-blue-500 scale-110' : ''} w-10 h-10 rounded-lg text-white font-bold text-xs flex items-center justify-center transition-all hover:scale-110"
-                                                title="${t.texto}"
-                                            >
-                                                ${iconeStatus || (index + 1)}
-                                            </button>
-                                        `;
+                                            <button onclick="app.irParaTarefa(${index})"
+                                                class="${cor} ${estaAtual ? 'ring-4 ring-blue-500 scale-110' : ''} w-10 h-10 rounded-lg text-white font-bold text-xs flex items-center justify-center transition-all hover:scale-110"
+                                                title="${t.texto}">
+                                                ${icone}
+                                            </button>`;
                                     }).join('')}
                                 </div>
-                                <div class="flex gap-4 mt-3 text-xs text-gray-600">
-                                    <span class="flex items-center gap-1">
-                                        <div class="w-3 h-3 bg-green-500 rounded"></div>
-                                        Concluída
-                                    </span>
-                                    <span class="flex items-center gap-1">
-                                        <div class="w-3 h-3 bg-orange-400 rounded"></div>
-                                        Não deu tempo
-                                    </span>
-                                    <span class="flex items-center gap-1">
-                                        <div class="w-3 h-3 bg-gray-300 rounded"></div>
-                                        Pendente
-                                    </span>
-                                    <span class="flex items-center gap-1">
-                                        <div class="w-3 h-3 bg-blue-500 rounded ring-2 ring-blue-500"></div>
-                                        Atual
-                                    </span>
+                                <div class="flex flex-wrap gap-4 mt-3 text-xs text-gray-600">
+                                    <span class="flex items-center gap-1"><div class="w-3 h-3 bg-green-500 rounded"></div>Concluída</span>
+                                    <span class="flex items-center gap-1"><div class="w-3 h-3 bg-orange-400 rounded"></div>Não deu tempo</span>
+                                    <span class="flex items-center gap-1"><div class="w-3 h-3 bg-red-200 rounded"></div>Prioritária</span>
+                                    <span class="flex items-center gap-1"><div class="w-3 h-3 bg-gray-300 rounded"></div>Pendente</span>
                                 </div>
                             </div>
 
                             <!-- Card da Tarefa -->
                             <div class="tarefa-card bg-white rounded-lg shadow-2xl overflow-hidden slide-in">
-                                <!-- Cabeçalho da Tarefa -->
-                                <div class="${corTipo} text-white p-6">
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <span class="text-4xl">${tarefa.icone}</span>
-                                        <div class="flex-1">
-                                            <p class="text-sm opacity-90">${tarefa.categoria.toUpperCase()}</p>
-                                            <h2 class="text-2xl font-bold">
-                                                ${estaConcluida ? '✅ CONCLUÍDA' : 
-                                                  naoDeuTempo ? '⚠️ NÃO DEU TEMPO' : 
-                                                  tarefa.tipo === 'prioritaria' ? '🔴 PRIORIDADE' : 
-                                                  tarefa.tipo === 'verificacao' ? '✅ VERIFICAÇÃO' : '📋 TAREFA'}
-                                            </h2>
+
+                                <!-- Header da Tarefa -->
+                                <div class="${corHeader} text-white p-6">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="flex items-center gap-3 flex-1">
+                                            <span class="text-4xl">${tarefa.icone}</span>
+                                            <div>
+                                                <div class="mb-1">${badgeHtml}</div>
+                                                <p class="text-xs opacity-75 uppercase">${tarefa.categoria}</p>
+                                            </div>
                                         </div>
-                                        ${estaConcluida ? `
-                                            <div class="text-right">
-                                                <p class="text-xs opacity-75">Concluída em:</p>
-                                                <p class="text-sm font-bold">${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</p>
+                                        ${tarefa.tem_timer && !estaConcluida ? `
+                                            <div class="flex flex-col items-center gap-2">
+                                                <div id="timerCircle" class="timer-circle timer-ok">
+                                                    <span id="timerDisplay">05:00</span>
+                                                </div>
+                                                <button onclick="app.resetarTimer()" class="text-xs bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded-full transition">
+                                                    🔄 Resetar
+                                                </button>
                                             </div>
                                         ` : ''}
                                     </div>
@@ -905,92 +970,67 @@
 
                                 <!-- Corpo da Tarefa -->
                                 <div class="p-8">
-                                    <h3 class="text-2xl font-bold text-gray-800 mb-6">
-                                        ${tarefa.texto}
-                                    </h3>
+                                    <h3 class="text-xl font-bold text-gray-800 mb-6">${tarefa.texto}</h3>
 
                                     ${tarefa.dica ? `
                                         <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg mb-6">
                                             <p class="text-sm font-semibold text-blue-800 mb-1">💡 DICA:</p>
-                                            <p class="text-gray-700">${tarefa.dica}</p>
+                                            <p class="text-gray-700 text-sm">${tarefa.dica}</p>
                                         </div>
                                     ` : ''}
 
-                                    ${tarefa.tem_contador ? `
-                                        <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 mb-6">
-                                            <label class="block text-sm font-semibold text-gray-700 mb-3">📊 Contador (opcional):</label>
-                                            <input 
-                                                type="number" 
-                                                id="contadorInput" 
-                                                min="0"
-                                                value="${tarefa.contador_valor || 0}"
-                                                onchange="app.atualizarContador(this.value)"
-                                                ${estaConcluida ? 'disabled' : ''}
-                                                class="w-full px-4 py-3 text-2xl font-bold text-center border-2 ${estaConcluida ? 'bg-gray-100 border-gray-300 cursor-not-allowed' : 'border-cm-turquesa'} rounded-lg focus:outline-none focus:ring-2 focus:ring-cm-turquesa"
-                                                placeholder="0"
-                                            />
-                                            <p class="text-xs text-gray-500 mt-2 text-center">
-                                                ${tarefa.categoria === 'atendimento' ? 'Quantos atendimentos realizados?' : 
-                                                  tarefa.categoria === 'prospeccao' ? 'Quantas ações de prospecção?' : 
-                                                  'Quantidade realizada'}
-                                            </p>
+                                    ${tarefa.tem_contador && !estaConcluida && !naoDeuTempo ? `
+                                        <div class="mb-6">
+                                            <p class="text-sm font-semibold text-gray-700 mb-3">📊 Contador de atendimentos:</p>
+                                            <div class="contador-rapido">
+                                                <button onclick="app.decrementarContador()" class="contador-btn bg-red-100 text-red-600 hover:bg-red-200">−</button>
+                                                <span id="contadorValorDisplay" class="contador-valor">${tarefa.contador_valor || 0}</span>
+                                                <button onclick="app.incrementarContador()" class="contador-btn bg-green-100 text-green-600 hover:bg-green-200">+</button>
+                                                <span class="text-gray-500 text-sm ml-2">atendimentos</span>
+                                            </div>
                                         </div>
                                     ` : ''}
 
-                                    ${tarefa.tempo_estimado_minutos ? `
-                                        <div class="flex items-center justify-center gap-2 text-gray-600 mb-6">
-                                            <span class="text-2xl">⏱️</span>
-                                            <span>Tempo estimado: <strong>${tarefa.tempo_estimado_minutos} min</strong></span>
+                                    ${tarefa.tem_contador && estaConcluida && tarefa.contador_valor > 0 ? `
+                                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-center">
+                                            <p class="text-sm text-gray-600">Atendimentos registrados</p>
+                                            <p class="text-4xl font-bold text-green-600">${tarefa.contador_valor}</p>
                                         </div>
                                     ` : ''}
 
                                     <!-- Botões de Ação -->
-                                    <div class="mt-8">
+                                    <div class="mt-6">
                                         ${estaConcluida ? `
-                                            <!-- Tarefa CONCLUÍDA - Bloqueada -->
                                             <div class="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
-                                                <div class="text-6xl mb-4">✅</div>
-                                                <h3 class="text-2xl font-bold text-green-700 mb-2">Tarefa Concluída!</h3>
-                                                <p class="text-green-600">
-                                                    Finalizada em ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
+                                                <div class="text-5xl mb-3">✅</div>
+                                                <h3 class="text-xl font-bold text-green-700 mb-1">Tarefa Concluída!</h3>
+                                                <p class="text-green-600 text-sm">
+                                                    Finalizada às ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
                                                 </p>
-                                                ${tarefa.contador_valor > 0 ? `
-                                                    <div class="mt-4 bg-white rounded-lg p-4 inline-block">
-                                                        <p class="text-sm text-gray-600">Contador registrado:</p>
-                                                        <p class="text-3xl font-bold text-green-600">${tarefa.contador_valor}</p>
-                                                    </div>
-                                                ` : ''}
-                                                <p class="text-xs text-gray-500 mt-4">Esta tarefa está bloqueada e não pode ser alterada</p>
+                                                <p class="text-xs text-gray-400 mt-3">Esta tarefa está bloqueada e não pode ser alterada</p>
                                             </div>
                                         ` : naoDeuTempo ? `
-                                            <!-- Tarefa NÃO DEU TEMPO - Pode refazer -->
                                             <div class="bg-orange-50 border-2 border-orange-500 rounded-lg p-6 mb-4">
                                                 <div class="text-center mb-4">
-                                                    <div class="text-5xl mb-3">⚠️</div>
-                                                    <h3 class="text-xl font-bold text-orange-700 mb-2">Esta tarefa não foi concluída</h3>
-                                                    <p class="text-orange-600 mb-1"><strong>Motivo:</strong> ${tarefa.motivo_nao_concluida}</p>
-                                                    <p class="text-xs text-gray-600">Marcada às ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</p>
+                                                    <div class="text-4xl mb-2">⚠️</div>
+                                                    <h3 class="text-lg font-bold text-orange-700 mb-1">Esta tarefa não foi concluída</h3>
+                                                    <p class="text-orange-600 text-sm"><strong>Motivo:</strong> ${tarefa.motivo_nao_concluida}</p>
+                                                    <p class="text-xs text-gray-500 mt-1">Marcada às ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</p>
                                                 </div>
-                                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-4">
-                                                    <p class="text-sm text-yellow-800">
-                                                        💡 <strong>Sobrou tempo agora?</strong> Você pode refazer esta tarefa!
-                                                    </p>
+                                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded mb-4">
+                                                    <p class="text-sm text-yellow-800">💡 <strong>Sobrou tempo?</strong> Você pode refazer esta tarefa!</p>
                                                 </div>
-                                                <button onclick="app.refazerTarefa()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
-                                                    <span class="text-2xl">🔄</span>
-                                                    <span>REFAZER AGORA</span>
+                                                <button onclick="app.refazerTarefa()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition flex items-center justify-center gap-2">
+                                                    🔄 REFAZER AGORA
                                                 </button>
                                             </div>
                                         ` : `
-                                            <!-- Tarefa PENDENTE - Botões normais -->
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <button onclick="app.concluirTarefa()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
-                                                    <span class="text-2xl">✅</span>
-                                                    <span>CONCLUÍDA</span>
+                                                    <span class="text-2xl">✅</span> CONCLUÍDA
                                                 </button>
                                                 <button onclick="app.abrirModalNaoDeuTempo()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition flex items-center justify-center gap-2">
-                                                    <span class="text-2xl">❌</span>
-                                                    <span>NÃO DEU TEMPO</span>
+                                                    <span class="text-2xl">❌</span> NÃO DEU TEMPO
                                                 </button>
                                             </div>
                                         `}
@@ -998,43 +1038,40 @@
 
                                     <!-- Navegação -->
                                     <div class="flex justify-between mt-6 pt-6 border-t">
-                                        <button 
-                                            onclick="app.tarefaAnterior()" 
+                                        <button onclick="app.tarefaAnterior()"
                                             ${this.tarefaAtualIndex === 0 ? 'disabled' : ''}
-                                            class="px-6 py-2 rounded-lg font-semibold ${this.tarefaAtualIndex === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-300 hover:bg-gray-400 text-gray-700'}">
+                                            class="px-5 py-2 rounded-lg font-semibold ${this.tarefaAtualIndex === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-300 hover:bg-gray-400 text-gray-700'}">
                                             ⬅️ Anterior
                                         </button>
-                                        <span class="text-gray-500 flex items-center gap-2">
-                                            <span class="text-2xl">${tarefa.icone}</span>
-                                            <span class="font-semibold">${this.tarefaAtualIndex + 1}/${this.tarefas.length}</span>
+                                        <span class="text-gray-500 flex items-center font-semibold text-sm">
+                                            ${this.tarefaAtualIndex + 1} / ${this.tarefas.length}
                                         </span>
-                                        <button 
-                                            onclick="app.proximaTarefa()" 
+                                        <button onclick="app.proximaTarefa()"
                                             ${this.tarefaAtualIndex === this.tarefas.length - 1 ? 'disabled' : ''}
-                                            class="px-6 py-2 rounded-lg font-semibold ${this.tarefaAtualIndex === this.tarefas.length - 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-300 hover:bg-gray-400 text-gray-700'}">
+                                            class="px-5 py-2 rounded-lg font-semibold ${this.tarefaAtualIndex === this.tarefas.length - 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-300 hover:bg-gray-400 text-gray-700'}">
                                             Próxima ➡️
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Métricas do Dia -->
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                                <div class="bg-white p-4 rounded-lg shadow text-center">
-                                    <p class="text-3xl font-bold text-cm-turquesa">${this.metricas.concluidas}</p>
-                                    <p class="text-xs text-gray-600">Concluídas</p>
+                            <!-- Métricas Rápidas -->
+                            <div class="grid grid-cols-4 gap-3 mt-6">
+                                <div class="bg-white p-3 rounded-lg shadow text-center">
+                                    <p class="text-2xl font-bold text-cm-turquesa">${this.metricas.concluidas}</p>
+                                    <p class="text-xs text-gray-500">Concluídas</p>
                                 </div>
-                                <div class="bg-white p-4 rounded-lg shadow text-center">
-                                    <p class="text-3xl font-bold text-red-500">${this.metricas.nao_deu_tempo}</p>
-                                    <p class="text-xs text-gray-600">Não Deu Tempo</p>
+                                <div class="bg-white p-3 rounded-lg shadow text-center">
+                                    <p class="text-2xl font-bold text-red-500">${this.metricas.nao_deu_tempo}</p>
+                                    <p class="text-xs text-gray-500">Não Deram</p>
                                 </div>
-                                <div class="bg-white p-4 rounded-lg shadow text-center">
-                                    <p class="text-3xl font-bold text-blue-500">${this.metricas.leads_atendidos}</p>
-                                    <p class="text-xs text-gray-600">Leads Atendidos</p>
+                                <div class="bg-white p-3 rounded-lg shadow text-center">
+                                    <p class="text-2xl font-bold text-blue-500">${this.metricas.leads_atendidos}</p>
+                                    <p class="text-xs text-gray-500">Leads</p>
                                 </div>
-                                <div class="bg-white p-4 rounded-lg shadow text-center">
-                                    <p class="text-3xl font-bold text-green-500">${progresso}%</p>
-                                    <p class="text-xs text-gray-600">Progresso</p>
+                                <div class="bg-white p-3 rounded-lg shadow text-center">
+                                    <p class="text-2xl font-bold text-green-500">${progresso}%</p>
+                                    <p class="text-xs text-gray-500">Progresso</p>
                                 </div>
                             </div>
                         </div>
@@ -1042,46 +1079,78 @@
                         ${this.renderSidebarRegras()}
                     </div>
                 `;
-            }
 
-            atualizarContador(valor) {
-                const tarefa = this.tarefas[this.tarefaAtualIndex];
-                tarefa.contador_valor = parseInt(valor) || 0;
-                
-                // Atualizar métricas se for lead atendido
-                if (tarefa.categoria === 'atendimento') {
-                    this.metricas.leads_atendidos = this.tarefas
-                        .filter(t => t.categoria === 'atendimento' && t.contador_valor)
-                        .reduce((sum, t) => sum + t.contador_valor, 0);
+                // Iniciar timer automaticamente se necessário
+                if (deveIniciarTimer) {
+                    setTimeout(() => this.iniciarTimer(), 300);
                 }
             }
 
+            renderSidebarRegras() {
+                return `
+                    <div class="sidebar-regras">
+                        <h3 class="text-base font-bold text-cm-escuro mb-3">⚠️ REGRAS DO DIA</h3>
+                        <div class="space-y-2 mb-6">
+                            ${this.regras.filter(r => r.tipo === 'regra').map(r => `
+                                <div class="regra-item bg-gray-50 p-3 rounded-lg">
+                                    <p class="text-xs font-semibold text-gray-800">${r.icone} ${r.texto}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <h3 class="text-base font-bold text-cm-escuro mb-3">💡 LEMBRETES</h3>
+                        <div class="space-y-2 mb-6">
+                            ${this.regras.filter(r => r.tipo === 'lembrete').map(r => `
+                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                                    <p class="text-xs text-gray-700">${r.icone} ${r.texto}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <h3 class="text-base font-bold text-cm-escuro mb-3">📲 PLATAFORMAS</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center p-2 rounded ${this.statusPlataformas.whatsapp_ok ? 'bg-green-50' : 'bg-red-50'}">
+                                <span class="text-xs font-semibold">WhatsApp</span>
+                                <span>${this.statusPlataformas.whatsapp_ok ? '✅' : '❌'}</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 rounded ${this.statusPlataformas.ll_ok ? 'bg-green-50' : 'bg-red-50'}">
+                                <span class="text-xs font-semibold">LL (CRM)</span>
+                                <span>${this.statusPlataformas.ll_ok ? '✅' : '❌'}</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2 rounded bg-green-50">
+                                <span class="text-xs font-semibold">App Rotina</span>
+                                <span>✅</span>
+                            </div>
+                        </div>
+
+                        ${isDiaEspecial() ? `
+                            <div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                                <p class="text-xs font-bold text-yellow-800">📚 ${getNomeDia()}</p>
+                                <p class="text-xs text-yellow-700 mt-1">Prospecção e remarketing desativados hoje.</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
             renderResumo() {
-                const app = document.getElementById('app');
                 const periodoTexto = this.periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde';
                 const progresso = this.calcularProgresso();
+                const tarefasProblema = this.tarefas.filter(t => t.status === 'nao_deu_tempo');
 
-                // Calcular estatísticas
-                const tarefasMaisProblematicas = this.tarefas
-                    .filter(t => t.status === 'nao_deu_tempo')
-                    .map(t => ({ texto: t.texto, motivo: t.motivo_nao_concluida }));
-
-                app.innerHTML = `
+                document.getElementById('app').innerHTML = `
                     <div class="min-h-screen bg-gray-50">
                         <div class="bg-cm-escuro text-white shadow-lg">
                             <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-                                <h1 class="text-xl font-bold">Resumo - ${periodoTexto}</h1>
+                                <h1 class="text-xl font-bold">Resumo — ${periodoTexto}</h1>
                                 <button onclick="app.renderDashboard()" class="bg-cm-turquesa hover:opacity-90 px-4 py-2 rounded-lg text-sm">🏠 Início</button>
                             </div>
                         </div>
 
                         <div class="max-w-4xl mx-auto px-4 py-8">
                             <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
-                                <h2 class="text-3xl font-bold text-center text-cm-escuro mb-6">
-                                    🎉 Rotina Finalizada!
-                                </h2>
+                                <h2 class="text-3xl font-bold text-center text-cm-escuro mb-8">🎉 Rotina Finalizada!</h2>
 
-                                <!-- Métricas Principais -->
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                     <div class="bg-green-50 p-6 rounded-lg text-center">
                                         <p class="text-4xl font-bold text-green-600">${this.metricas.concluidas}</p>
@@ -1101,22 +1170,26 @@
                                     </div>
                                 </div>
 
-                                <!-- Tarefas que não deram tempo -->
-                                ${tarefasMaisProblematicas.length > 0 ? `
+                                ${tarefasProblema.length > 0 ? `
                                     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-6">
                                         <h3 class="font-bold text-yellow-800 mb-4">⚠️ Tarefas que Não Deram Tempo:</h3>
                                         <div class="space-y-3">
-                                            ${tarefasMaisProblematicas.map(t => `
+                                            ${tarefasProblema.map(t => `
                                                 <div class="bg-white p-4 rounded-lg">
                                                     <p class="font-semibold text-gray-800">${t.texto}</p>
-                                                    <p class="text-sm text-gray-600 mt-1"><strong>Motivo:</strong> ${t.motivo}</p>
+                                                    <p class="text-sm text-gray-600 mt-1"><strong>Motivo:</strong> ${t.motivo_nao_concluida}</p>
                                                 </div>
                                             `).join('')}
                                         </div>
                                     </div>
-                                ` : ''}
+                                ` : `
+                                    <div class="bg-green-50 border-l-4 border-green-500 p-6 rounded-lg mb-6 text-center">
+                                        <div class="text-5xl mb-3">🏆</div>
+                                        <p class="font-bold text-green-700 text-lg">Todas as tarefas concluídas!</p>
+                                        <p class="text-green-600 text-sm mt-1">Excelente desempenho hoje!</p>
+                                    </div>
+                                `}
 
-                                <!-- Botão Voltar -->
                                 <button onclick="app.renderDashboard()" class="w-full btn-primary py-4 text-lg">
                                     ✅ Finalizar e Voltar ao Início
                                 </button>
@@ -1126,42 +1199,35 @@
                 `;
             }
 
-            // ===== MÉTODOS DE DASHBOARD E MÉTRICAS =====
-
-            voltarDashboard() {
-                this.currentPage = 'dashboard';
-                this.renderDashboard();
-            }
+            // =============================================
+            // MÉTRICAS INDIVIDUAIS
+            // =============================================
+            voltarDashboard() { this.renderDashboard(); }
 
             async renderMetricasIndividuais() {
                 await this.carregarMetricasHistorico();
-                
-                const app = document.getElementById('app');
                 const nomeUsuario = this.currentUser.user_metadata?.nome || this.currentUser.email.split('@')[0];
                 const ultimos7Dias = this.metricasHistorico;
-                const mediaGeral = ultimos7Dias.length > 0 
+                const mediaGeral = ultimos7Dias.length > 0
                     ? (ultimos7Dias.reduce((sum, m) => sum + parseFloat(m.taxa_conclusao), 0) / ultimos7Dias.length).toFixed(1)
                     : 0;
-                
                 const totalLeads = ultimos7Dias.reduce((sum, m) => sum + parseInt(m.leads_atendidos || 0), 0);
                 const totalConcluidas = ultimos7Dias.reduce((sum, m) => sum + parseInt(m.concluidas), 0);
                 const totalNaoDeuTempo = ultimos7Dias.reduce((sum, m) => sum + parseInt(m.nao_deu_tempo), 0);
 
                 const dadosPorDia = {};
                 ultimos7Dias.forEach(m => {
-                    if (!dadosPorDia[m.data]) {
-                        dadosPorDia[m.data] = { manha: null, tarde: null };
-                    }
+                    if (!dadosPorDia[m.data]) dadosPorDia[m.data] = { manha: null, tarde: null };
                     dadosPorDia[m.data][m.periodo] = parseFloat(m.taxa_conclusao);
                 });
 
-                app.innerHTML = `
+                document.getElementById('app').innerHTML = `
                     <div class="min-h-screen bg-gray-50">
                         <div class="bg-cm-escuro text-white shadow-lg">
                             <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
                                 <div>
                                     <h1 class="text-xl font-bold">📊 Meu Desempenho</h1>
-                                    <p class="text-xs text-gray-300">Olá, ${nomeUsuario}!</p>
+                                    <p class="text-xs text-gray-300">${nomeUsuario}</p>
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="app.voltarDashboard()" class="bg-cm-turquesa hover:opacity-90 px-4 py-2 rounded-lg text-sm">🏠 Voltar</button>
@@ -1171,27 +1237,22 @@
                         </div>
 
                         <div class="max-w-6xl mx-auto px-4 py-8">
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-cm-turquesa">
                                     <p class="text-sm text-gray-600 mb-1">Média 7 Dias</p>
                                     <p class="text-4xl font-bold text-cm-turquesa">${mediaGeral}%</p>
-                                    <p class="text-xs text-gray-500 mt-2">${ultimos7Dias.length} períodos</p>
                                 </div>
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-green-500">
                                     <p class="text-sm text-gray-600 mb-1">Concluídas</p>
                                     <p class="text-4xl font-bold text-green-600">${totalConcluidas}</p>
-                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
                                 </div>
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-orange-500">
                                     <p class="text-sm text-gray-600 mb-1">Não Deu Tempo</p>
                                     <p class="text-4xl font-bold text-orange-600">${totalNaoDeuTempo}</p>
-                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
                                 </div>
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-blue-500">
                                     <p class="text-sm text-gray-600 mb-1">Leads Atendidos</p>
                                     <p class="text-4xl font-bold text-blue-600">${totalLeads}</p>
-                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
                                 </div>
                             </div>
 
@@ -1200,12 +1261,11 @@
                                 <div class="space-y-3">
                                     ${Object.keys(dadosPorDia).sort().reverse().map(data => {
                                         const d = new Date(data + 'T00:00:00');
-                                        const diaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d.getDay()];
-                                        const dataFormatada = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                                        const diaSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()];
+                                        const dataFormatada = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
                                         const manha = dadosPorDia[data].manha;
                                         const tarde = dadosPorDia[data].tarde;
                                         const media = ((manha || 0) + (tarde || 0)) / (manha && tarde ? 2 : 1);
-                                        
                                         return `
                                             <div>
                                                 <div class="flex justify-between items-center mb-1">
@@ -1213,27 +1273,22 @@
                                                     <span class="text-sm font-bold ${media >= 80 ? 'text-green-600' : media >= 60 ? 'text-orange-600' : 'text-red-600'}">${media.toFixed(0)}%</span>
                                                 </div>
                                                 <div class="flex gap-2">
-                                                    ${manha !== null ? `
-                                                        <div class="flex-1">
-                                                            <div class="w-full bg-gray-200 rounded-full h-6">
-                                                                <div class="bg-orange-400 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold" style="width: ${manha}%">
-                                                                    ${manha > 20 ? '🌅 ' + manha.toFixed(0) + '%' : ''}
-                                                                </div>
+                                                    <div class="flex-1">
+                                                        <div class="w-full bg-gray-200 rounded-full h-5">
+                                                            <div class="bg-orange-400 h-5 rounded-full flex items-center justify-center text-xs text-white font-bold" style="width:${manha || 0}%">
+                                                                ${manha > 20 ? '🌅 ' + manha.toFixed(0) + '%' : ''}
                                                             </div>
                                                         </div>
-                                                    ` : '<div class="flex-1 bg-gray-100 rounded h-6 flex items-center justify-center text-xs text-gray-400">-</div>'}
-                                                    ${tarde !== null ? `
-                                                        <div class="flex-1">
-                                                            <div class="w-full bg-gray-200 rounded-full h-6">
-                                                                <div class="bg-blue-500 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold" style="width: ${tarde}%">
-                                                                    ${tarde > 20 ? '🌆 ' + tarde.toFixed(0) + '%' : ''}
-                                                                </div>
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <div class="w-full bg-gray-200 rounded-full h-5">
+                                                            <div class="bg-blue-500 h-5 rounded-full flex items-center justify-center text-xs text-white font-bold" style="width:${tarde || 0}%">
+                                                                ${tarde > 20 ? '🌆 ' + tarde.toFixed(0) + '%' : ''}
                                                             </div>
                                                         </div>
-                                                    ` : '<div class="flex-1 bg-gray-100 rounded h-6 flex items-center justify-center text-xs text-gray-400">-</div>'}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        `;
+                                            </div>`;
                                     }).join('')}
                                 </div>
                             </div>
@@ -1242,67 +1297,50 @@
                                 <h3 class="text-lg font-bold text-gray-800 mb-4">⚠️ Tarefas que Mais Não Deram Tempo</h3>
                                 <div id="tarefasProblema">Carregando...</div>
                             </div>
-
                         </div>
                     </div>
                 `;
-
                 this.carregarTarefasProblemaIndividual();
             }
 
             async carregarTarefasProblemaIndividual() {
                 const { data, error } = await supabase.rpc('get_top_tarefas_problema', {
-                    p_user_id: this.currentUser.id,
-                    p_limite: 5
+                    p_user_id: this.currentUser.id, p_limite: 5
                 });
-
                 const container = document.getElementById('tarefasProblema');
-                
                 if (error || !data || data.length === 0) {
                     container.innerHTML = `
                         <div class="text-center py-8">
                             <div class="text-6xl mb-4">🎉</div>
-                            <p class="text-gray-600 font-semibold">Parabéns! Nenhuma tarefa com problemas recorrentes!</p>
-                            <p class="text-sm text-gray-500 mt-2">Continue assim!</p>
-                        </div>
-                    `;
+                            <p class="text-gray-600 font-semibold">Nenhuma tarefa com problemas recorrentes!</p>
+                        </div>`;
                     return;
                 }
-
                 container.innerHTML = data.map((t, index) => `
                     <div class="flex items-start gap-4 p-4 border-l-4 border-orange-500 bg-orange-50 rounded-lg mb-3">
-                        <div class="flex-shrink-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold">
-                            ${index + 1}
-                        </div>
+                        <div class="flex-shrink-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold">${index + 1}</div>
                         <div class="flex-1">
                             <p class="font-semibold text-gray-800">${t.tarefa}</p>
-                            <p class="text-sm text-gray-600 mt-1">
-                                <strong>Motivo mais comum:</strong> ${t.motivo_comum || 'Não especificado'}
-                            </p>
-                            <p class="text-xs text-orange-600 mt-1">
-                                ${t.ocorrencias} ${t.ocorrencias === 1 ? 'ocorrência' : 'ocorrências'} nos últimos 7 dias
-                            </p>
+                            <p class="text-sm text-gray-600 mt-1"><strong>Motivo mais comum:</strong> ${t.motivo_comum || 'Não especificado'}</p>
+                            <p class="text-xs text-orange-600 mt-1">${t.ocorrencias} ocorrência(s) nos últimos 7 dias</p>
                         </div>
-                    </div>
-                `).join('');
+                    </div>`).join('');
             }
 
+            // =============================================
+            // ADMIN
+            // =============================================
             async renderDashboardAdminGeral() {
                 await this.carregarRankingConsultores();
-
-                const app = document.getElementById('app');
                 const mediaEquipe = this.rankingConsultores.length > 0
                     ? (this.rankingConsultores.reduce((sum, c) => sum + parseFloat(c.media_conclusao), 0) / this.rankingConsultores.length).toFixed(1)
                     : 0;
 
-                app.innerHTML = `
+                document.getElementById('app').innerHTML = `
                     <div class="min-h-screen bg-gray-50">
                         <div class="bg-cm-escuro text-white shadow-lg">
                             <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-                                <div>
-                                    <h1 class="text-xl font-bold">👥 Dashboard da Equipe</h1>
-                                    <p class="text-xs text-gray-300">Visão Geral</p>
-                                </div>
+                                <h1 class="text-xl font-bold">👥 Dashboard da Equipe</h1>
                                 <div class="flex gap-2">
                                     <button onclick="app.voltarDashboard()" class="bg-cm-turquesa hover:opacity-90 px-4 py-2 rounded-lg text-sm">🏠 Voltar</button>
                                     <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
@@ -1311,7 +1349,6 @@
                         </div>
 
                         <div class="max-w-6xl mx-auto px-4 py-8">
-                            
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-cm-turquesa">
                                     <p class="text-sm text-gray-600 mb-1">Média da Equipe</p>
@@ -1333,71 +1370,52 @@
                             <div class="bg-white rounded-lg shadow-lg p-6">
                                 <h3 class="text-lg font-bold text-gray-800 mb-4">🏆 Ranking de Consultores</h3>
                                 <div class="space-y-3">
-                                    ${this.rankingConsultores.map((consultor, index) => {
-                                        const posicao = index + 1;
-                                        const medalha = posicao === 1 ? '🥇' : posicao === 2 ? '🥈' : posicao === 3 ? '🥉' : `${posicao}º`;
-                                        const corBorda = consultor.media_conclusao >= 80 ? 'border-green-500' : 
-                                                       consultor.media_conclusao >= 60 ? 'border-orange-500' : 'border-red-500';
-                                        
+                                    ${this.rankingConsultores.map((c, index) => {
+                                        const pos = index + 1;
+                                        const medalha = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : `${pos}º`;
+                                        const cor = c.media_conclusao >= 80 ? 'border-green-500' : c.media_conclusao >= 60 ? 'border-orange-500' : 'border-red-500';
                                         return `
-                                            <div class="flex items-center gap-4 p-4 border-l-4 ${corBorda} bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition"
-                                                 onclick="app.verDetalhesConsultor('${consultor.user_id}')">
-                                                <div class="flex-shrink-0 w-12 text-center text-2xl">
-                                                    ${medalha}
-                                                </div>
+                                            <div class="flex items-center gap-4 p-4 border-l-4 ${cor} bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition"
+                                                 onclick="app.verDetalhesConsultor('${c.user_id}')">
+                                                <div class="w-10 text-center text-2xl">${medalha}</div>
                                                 <div class="flex-1">
-                                                    <p class="font-bold text-gray-800">${consultor.consultor_nome}</p>
-                                                    <p class="text-xs text-gray-500">${consultor.consultor_email}</p>
+                                                    <p class="font-bold text-gray-800">${c.consultor_nome}</p>
+                                                    <p class="text-xs text-gray-500">${c.consultor_email}</p>
                                                 </div>
                                                 <div class="text-right">
-                                                    <p class="text-2xl font-bold ${consultor.media_conclusao >= 80 ? 'text-green-600' : consultor.media_conclusao >= 60 ? 'text-orange-600' : 'text-red-600'}">
-                                                        ${consultor.media_conclusao}%
-                                                    </p>
-                                                    <p class="text-xs text-gray-500">${consultor.total_leads} leads</p>
+                                                    <p class="text-2xl font-bold ${c.media_conclusao >= 80 ? 'text-green-600' : c.media_conclusao >= 60 ? 'text-orange-600' : 'text-red-600'}">${c.media_conclusao}%</p>
+                                                    <p class="text-xs text-gray-500">${c.total_leads} leads</p>
                                                 </div>
-                                                <div class="flex-shrink-0">
-                                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        `;
+                                            </div>`;
                                     }).join('')}
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 `;
             }
 
             async verDetalhesConsultor(userId) {
-                this.consultorSelecionado = userId;
-                
                 const { data: metricas } = await supabase
-                    .from('vw_metricas_diarias')
-                    .select('*')
+                    .from('vw_metricas_diarias').select('*')
                     .eq('user_id', userId)
-                    .gte('data', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+                    .gte('data', new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0])
                     .order('data', { ascending: false });
 
                 const { data: tarefasProblema } = await supabase.rpc('get_top_tarefas_problema', {
-                    p_user_id: userId,
-                    p_limite: 5
+                    p_user_id: userId, p_limite: 5
                 });
 
-                const consultor = this.rankingConsultores.find(c => c.user_id === userId);
-                if (!consultor) return;
+                const c = this.rankingConsultores.find(x => x.user_id === userId);
+                if (!c) return;
 
-                const app = document.getElementById('app');
-
-                app.innerHTML = `
+                document.getElementById('app').innerHTML = `
                     <div class="min-h-screen bg-gray-50">
                         <div class="bg-cm-escuro text-white shadow-lg">
                             <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
                                 <div>
-                                    <h1 class="text-xl font-bold">👤 ${consultor.consultor_nome}</h1>
-                                    <p class="text-xs text-gray-300">${consultor.consultor_email}</p>
+                                    <h1 class="text-xl font-bold">👤 ${c.consultor_nome}</h1>
+                                    <p class="text-xs text-gray-300">${c.consultor_email}</p>
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="app.renderDashboardAdminGeral()" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm">⬅️ Voltar</button>
@@ -1407,27 +1425,22 @@
                         </div>
 
                         <div class="max-w-6xl mx-auto px-4 py-8">
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-cm-turquesa">
-                                    <p class="text-sm text-gray-600 mb-1">Média 7 Dias</p>
-                                    <p class="text-4xl font-bold text-cm-turquesa">${consultor.media_conclusao}%</p>
-                                    <p class="text-xs text-gray-500 mt-2">${consultor.total_periodos} períodos</p>
+                                    <p class="text-sm text-gray-600">Média 7 Dias</p>
+                                    <p class="text-4xl font-bold text-cm-turquesa">${c.media_conclusao}%</p>
                                 </div>
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-green-500">
-                                    <p class="text-sm text-gray-600 mb-1">Concluídas</p>
-                                    <p class="text-4xl font-bold text-green-600">${consultor.total_concluidas}</p>
-                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                    <p class="text-sm text-gray-600">Concluídas</p>
+                                    <p class="text-4xl font-bold text-green-600">${c.total_concluidas}</p>
                                 </div>
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-orange-500">
-                                    <p class="text-sm text-gray-600 mb-1">Não Deu Tempo</p>
-                                    <p class="text-4xl font-bold text-orange-600">${consultor.total_nao_deu_tempo}</p>
-                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                    <p class="text-sm text-gray-600">Não Deu Tempo</p>
+                                    <p class="text-4xl font-bold text-orange-600">${c.total_nao_deu_tempo}</p>
                                 </div>
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-blue-500">
-                                    <p class="text-sm text-gray-600 mb-1">Leads Atendidos</p>
-                                    <p class="text-4xl font-bold text-blue-600">${consultor.total_leads}</p>
-                                    <p class="text-xs text-gray-500 mt-2">Últimos 7 dias</p>
+                                    <p class="text-sm text-gray-600">Leads Atendidos</p>
+                                    <p class="text-4xl font-bold text-blue-600">${c.total_leads}</p>
                                 </div>
                             </div>
 
@@ -1441,23 +1454,20 @@
                                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Período</th>
                                                 <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Conclusão</th>
                                                 <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Concluídas</th>
-                                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Não Deram Tempo</th>
+                                                <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Não Deram</th>
                                                 <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">Leads</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-200">
-                                            ${metricas.map(m => `
+                                            ${(metricas || []).map(m => `
                                                 <tr class="hover:bg-gray-50">
                                                     <td class="px-4 py-3 text-sm">${new Date(m.data).toLocaleDateString('pt-BR')}</td>
                                                     <td class="px-4 py-3 text-sm">${m.periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde'}</td>
-                                                    <td class="px-4 py-3 text-sm text-right font-bold ${m.taxa_conclusao >= 80 ? 'text-green-600' : m.taxa_conclusao >= 60 ? 'text-orange-600' : 'text-red-600'}">
-                                                        ${m.taxa_conclusao}%
-                                                    </td>
+                                                    <td class="px-4 py-3 text-sm text-right font-bold ${m.taxa_conclusao >= 80 ? 'text-green-600' : m.taxa_conclusao >= 60 ? 'text-orange-600' : 'text-red-600'}">${m.taxa_conclusao}%</td>
                                                     <td class="px-4 py-3 text-sm text-right">${m.concluidas}</td>
                                                     <td class="px-4 py-3 text-sm text-right">${m.nao_deu_tempo}</td>
                                                     <td class="px-4 py-3 text-sm text-right">${m.leads_atendidos}</td>
-                                                </tr>
-                                            `).join('')}
+                                                </tr>`).join('')}
                                         </tbody>
                                     </table>
                                 </div>
@@ -1467,37 +1477,26 @@
                                 <h3 class="text-lg font-bold text-gray-800 mb-4">⚠️ Tarefas com Dificuldade</h3>
                                 ${tarefasProblema && tarefasProblema.length > 0 ? `
                                     <div class="space-y-3">
-                                        ${tarefasProblema.map((t, index) => `
+                                        ${tarefasProblema.map((t, i) => `
                                             <div class="flex items-start gap-4 p-4 border-l-4 border-orange-500 bg-orange-50 rounded-lg">
-                                                <div class="flex-shrink-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold">
-                                                    ${index + 1}
-                                                </div>
-                                                <div class="flex-1">
+                                                <div class="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">${i + 1}</div>
+                                                <div>
                                                     <p class="font-semibold text-gray-800">${t.tarefa}</p>
-                                                    <p class="text-sm text-gray-600 mt-1">
-                                                        <strong>Motivo:</strong> ${t.motivo_comum || 'Não especificado'}
-                                                    </p>
-                                                    <p class="text-xs text-orange-600 mt-1">
-                                                        ${t.ocorrencias} ${t.ocorrencias === 1 ? 'vez' : 'vezes'} nos últimos 7 dias
-                                                    </p>
+                                                    <p class="text-sm text-gray-600 mt-1"><strong>Motivo:</strong> ${t.motivo_comum || 'Não especificado'}</p>
+                                                    <p class="text-xs text-orange-600 mt-1">${t.ocorrencias} vez(es) nos últimos 7 dias</p>
                                                 </div>
-                                            </div>
-                                        `).join('')}
+                                            </div>`).join('')}
                                     </div>
                                 ` : `
                                     <div class="text-center py-8">
                                         <div class="text-6xl mb-4">🎉</div>
                                         <p class="text-gray-600 font-semibold">Sem problemas recorrentes!</p>
-                                    </div>
-                                `}
+                                    </div>`}
                             </div>
-
                         </div>
                     </div>
                 `;
             }
-
-            // ===== MÉTODOS BOTÃO SECRETO ADMIN =====
 
             abrirModalAdmin() {
                 const modal = document.createElement('div');
@@ -1506,101 +1505,45 @@
                 modal.innerHTML = `
                     <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-2xl">
                         <h2 class="text-2xl font-bold text-purple-600 mb-2">👑 Ativar Modo Admin</h2>
-                        <p class="text-gray-600 mb-6 text-sm">Digite a senha secreta para se tornar administrador:</p>
-                        
-                        <input 
-                            type="password" 
-                            id="senhaAdmin" 
-                            placeholder="Senha secreta"
-                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-6 focus:outline-none focus:border-purple-500 text-lg font-mono text-center"
-                            maxlength="20"
-                        />
-                        
+                        <p class="text-gray-600 mb-6 text-sm">Digite a senha para ativar:</p>
+                        <input type="password" id="senhaAdmin" placeholder="Senha secreta"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-6 focus:outline-none focus:border-purple-500 text-lg font-mono text-center" maxlength="20" />
                         <div class="flex gap-3">
-                            <button onclick="app.fecharModalAdmin()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-3 px-6 rounded-lg transition">
-                                ❌ Cancelar
-                            </button>
-                            <button onclick="app.confirmarAdmin()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition">
-                                ✅ Confirmar
-                            </button>
+                            <button onclick="app.fecharModalAdmin()" class="flex-1 btn-secondary">❌ Cancelar</button>
+                            <button onclick="app.confirmarAdmin()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg">✅ Confirmar</button>
                         </div>
-                        
-                        <p class="text-xs text-gray-400 text-center mt-4">
-                            💡 Você precisa estar logado para ativar o modo admin
-                        </p>
-                    </div>
-                `;
+                    </div>`;
                 document.body.appendChild(modal);
-                
-                // Focar no input
-                setTimeout(() => {
-                    const input = document.getElementById('senhaAdmin');
-                    if (input) input.focus();
-                }, 100);
-                
-                // Permitir Enter para confirmar
-                const senhaInput = document.getElementById('senhaAdmin');
-                if (senhaInput) {
-                    senhaInput.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter') this.confirmarAdmin();
-                    });
-                }
+                setTimeout(() => { const i = document.getElementById('senhaAdmin'); if(i) i.focus(); }, 100);
+                document.getElementById('senhaAdmin')?.addEventListener('keypress', e => { if(e.key === 'Enter') this.confirmarAdmin(); });
             }
 
             fecharModalAdmin() {
-                const modal = document.getElementById('modalAdmin');
-                if (modal) modal.remove();
+                document.getElementById('modalAdmin')?.remove();
             }
 
             async confirmarAdmin() {
-                const senhaInput = document.getElementById('senhaAdmin');
-                if (!senhaInput) return;
-                
-                const senhaDigitada = senhaInput.value.trim();
-                const SENHA_ADMIN = '071727'; // 👈 MUDE ESTA SENHA AQUI SE QUISER!
-                
-                if (senhaDigitada !== SENHA_ADMIN) {
-                    alert('❌ Senha incorreta!\n\nTente novamente.');
-                    senhaInput.value = '';
-                    senhaInput.focus();
+                const input = document.getElementById('senhaAdmin');
+                if (!input) return;
+                const SENHA = '071727';
+                if (input.value.trim() !== SENHA) {
+                    alert('❌ Senha incorreta!');
+                    input.value = '';
+                    input.focus();
                     return;
                 }
-                
-                if (!this.currentUser) {
-                    alert('⚠️ Você precisa fazer LOGIN primeiro!');
-                    this.fecharModalAdmin();
-                    return;
-                }
-                
                 try {
-                    // Inserir ou atualizar role de admin
-                    const { error } = await supabase
-                        .from('user_roles')
-                        .upsert({ 
-                            user_id: this.currentUser.id, 
-                            is_admin: true 
-                        }, {
-                            onConflict: 'user_id'
-                        });
-                    
-                    if (error) throw error;
-                    
-                    // Atualizar flag local
+                    await supabase.from('user_roles').upsert(
+                        { user_id: this.currentUser.id, is_admin: true },
+                        { onConflict: 'user_id' }
+                    );
                     this.isAdmin = true;
-                    
-                    // Fechar modal
                     this.fecharModalAdmin();
-                    
-                    // Mostrar mensagem de sucesso
-                    alert('🎉 PARABÉNS!\n\nVocê agora é ADMINISTRADOR! 👑\n\nO menu "👥 Equipe" vai aparecer agora!\n\n✅ Privilégios de admin ativados!');
-                    
-                    // Recarregar dados e dashboard
+                    alert('🎉 Modo Admin ativado com sucesso!');
                     await this.carregarDados();
                     this.renderDashboard();
-                    
-                } catch (error) {
-                    console.error('❌ Erro ao tornar admin:', error);
-                    alert('❌ ERRO ao ativar modo admin!\n\nDetalhes: ' + error.message + '\n\nAbra o console (F12) para mais informações.');
+                } catch (err) {
+                    alert('❌ Erro ao ativar admin: ' + err.message);
                 }
             }
         }
@@ -1609,3 +1552,4 @@
     </script>
 </body>
 </html>
+
