@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C&M - Rotina Sequencial v3.1</title>
+    <title>C&M - Rotina Sequencial v3.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -21,94 +21,57 @@
         .text-cm-laranja { color: var(--cor-laranja); }
         .text-cm-turquesa { color: var(--cor-turquesa); }
 
-        .slide-in {
-            animation: slideIn 0.3s ease-out;
-        }
+        .slide-in { animation: slideIn 0.3s ease-out; }
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-
-        .pulse-animation {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
+        .pulse-animation { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-
         .timer-circle {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white;
+            width: 80px; height: 80px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: bold; color: white;
             transition: background-color 0.5s;
         }
         .timer-ok { background-color: #10B981; }
         .timer-warning { background-color: #F59E0B; }
-        .timer-danger { 
-            background-color: #EF4444;
-            animation: blink 0.8s infinite;
-        }
+        .timer-danger { background-color: #EF4444; animation: blink 0.8s infinite; }
         @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.6; }
         }
-
         .modal {
-            display: none;
-            position: fixed;
-            z-index: 50;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            overflow-y: auto;
+            display: none; position: fixed; z-index: 50;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); overflow-y: auto;
         }
         .modal.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            display: flex; align-items: center;
+            justify-content: center; padding: 20px;
         }
         .modal-content {
-            background: white;
-            border-radius: 12px;
-            max-width: 500px;
-            width: 100%;
+            background: white; border-radius: 12px;
+            max-width: 500px; width: 100%;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
         }
-
         .progress-bar { transition: width 0.5s ease; }
-
         .tarefa-card { min-height: 420px; }
-
         .regra-item { border-left: 4px solid var(--cor-turquesa); }
-
         .sidebar-regras {
-            position: fixed;
-            right: 0; top: 0;
-            height: 100vh;
-            width: 300px;
-            background: white;
+            position: fixed; right: 0; top: 0; height: 100vh;
+            width: 300px; background: white;
             box-shadow: -4px 0 6px rgba(0,0,0,0.1);
-            padding: 20px;
-            overflow-y: auto;
-            z-index: 40;
+            padding: 20px; overflow-y: auto; z-index: 40;
         }
-        @media (max-width: 768px) {
-            .sidebar-regras { display: none; }
-        }
-
+        @media (max-width: 768px) { .sidebar-regras { display: none; } }
         .btn-primary {
             background: linear-gradient(135deg, var(--cor-laranja), var(--cor-turquesa));
-            color: white; font-weight: bold;
-            padding: 12px 24px; border-radius: 8px;
-            transition: opacity 0.2s; cursor: pointer;
+            color: white; font-weight: bold; padding: 12px 24px;
+            border-radius: 8px; transition: opacity 0.2s; cursor: pointer;
         }
         .btn-primary:hover { opacity: 0.9; }
         .btn-secondary {
@@ -123,7 +86,6 @@
             transition: background 0.2s; cursor: pointer;
         }
         .btn-danger:hover { background: #DC2626; }
-
         .badge-prioritaria {
             background: #FEE2E2; color: #DC2626;
             padding: 2px 10px; border-radius: 999px;
@@ -139,36 +101,31 @@
             padding: 2px 10px; border-radius: 999px;
             font-size: 0.75rem; font-weight: bold;
         }
-
         .aviso-dia-especial {
             background: linear-gradient(135deg, #FEF3C7, #FDE68A);
-            border-left: 4px solid #F59E0B;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
+            border-left: 4px solid #F59E0B; border-radius: 8px;
+            padding: 16px; margin-bottom: 16px;
         }
-
         .contador-rapido {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: #F3F4F6;
-            border-radius: 12px;
-            padding: 16px;
+            display: flex; align-items: center; gap: 12px;
+            background: #F3F4F6; border-radius: 12px; padding: 16px;
         }
         .contador-btn {
-            width: 44px; height: 44px;
-            border-radius: 50%;
+            width: 44px; height: 44px; border-radius: 50%;
             font-size: 1.5rem; font-weight: bold;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: transform 0.1s;
-            border: none;
+            cursor: pointer; transition: transform 0.1s; border: none;
         }
         .contador-btn:active { transform: scale(0.9); }
         .contador-valor {
             font-size: 2.5rem; font-weight: bold;
-            min-width: 60px; text-align: center;
-            color: var(--cor-escuro);
+            min-width: 60px; text-align: center; color: var(--cor-escuro);
+        }
+
+        /* Tabs do login */
+        .tab-btn { transition: all 0.2s; }
+        .tab-btn.active {
+            background: var(--cor-escuro); color: white;
         }
     </style>
 </head>
@@ -207,6 +164,7 @@
     <script>
         const SUPABASE_URL = 'https://awppfluuudipkgrtrgyw.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3cHBmbHV1dWRpcGtncnRyZ3l3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4MTk5MDYsImV4cCI6MjA4NTM5NTkwNn0.L7EjW4ytXMbVlGxhsMb8Hh77cjRpPr5Y-KG0dR4e35A';
+        const EDGE_FUNCTION_URL = 'https://awppfluuudipkgrtrgyw.supabase.co/functions/v1/smart-endpoint';
 
         if (!window.__cmSupabaseClient) {
             window.__cmSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -217,24 +175,20 @@
         // UTILITÁRIOS DE DATA
         // =============================================
         function getDiaSemanaAtual() {
-            const dias = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+            const dias = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
             return dias[new Date().getDay()];
         }
-
         function isDiaEspecial() {
             const dia = getDiaSemanaAtual();
             return dia === 'segunda' || dia === 'quarta';
         }
-
         function getNomeDia() {
             const nomes = {
-                'domingo': 'Domingo', 'segunda': 'Segunda-feira',
-                'terca': 'Terça-feira', 'quarta': 'Quarta-feira',
-                'quinta': 'Quinta-feira', 'sexta': 'Sexta-feira', 'sabado': 'Sábado'
+                'domingo':'Domingo','segunda':'Segunda-feira','terca':'Terça-feira',
+                'quarta':'Quarta-feira','quinta':'Quinta-feira','sexta':'Sexta-feira','sabado':'Sábado'
             };
             return nomes[getDiaSemanaAtual()];
         }
-
         function filtrarTarefasPorDia(tarefas) {
             const diaAtual = getDiaSemanaAtual();
             return tarefas.filter(t => {
@@ -254,21 +208,14 @@
                 this.tarefas = [];
                 this.tarefaAtualIndex = 0;
                 this.regras = [];
-                this.metricas = {
-                    total_tarefas: 0,
-                    concluidas: 0,
-                    nao_deu_tempo: 0,
-                    leads_atendidos: 0
-                };
+                this.metricas = { total_tarefas:0, concluidas:0, nao_deu_tempo:0, leads_atendidos:0 };
                 this.timerInterval = null;
                 this.timerSegundos = 0;
                 this.timerAtivo = false;
                 this.autoSaveInterval = null;
                 this.metricasHistorico = [];
                 this.rankingConsultores = [];
-                this.consultorSelecionado = null;
-                this.statusPlataformas = { whatsapp_ok: false, ll_ok: false, rotina_ok: true };
-
+                this.statusPlataformas = { whatsapp_ok:false, ll_ok:false, rotina_ok:true };
                 this.verificarSessao();
             }
 
@@ -290,34 +237,86 @@
 
             async verificarAdmin() {
                 const { data } = await supabase
-                    .from('user_roles')
-                    .select('is_admin')
-                    .eq('user_id', this.currentUser.id)
-                    .single();
+                    .from('user_roles').select('is_admin')
+                    .eq('user_id', this.currentUser.id).single();
                 this.isAdmin = data?.is_admin || false;
             }
 
             async fazerLogin() {
-                const email = document.getElementById('loginEmail').value;
+                const email = document.getElementById('loginEmail').value.trim();
                 const senha = document.getElementById('loginSenha').value;
                 const btn = document.getElementById('btnLogin');
+                if (!email || !senha) { alert('❌ Preencha email e senha!'); return; }
                 btn.textContent = 'Entrando...';
                 btn.disabled = true;
 
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
-
                 if (error) {
                     alert('❌ Erro ao fazer login: ' + error.message);
                     btn.textContent = 'Entrar';
                     btn.disabled = false;
                     return;
                 }
-
                 this.currentUser = data.user;
                 await this.verificarAdmin();
                 await this.carregarDados();
                 this.iniciarAutoSave();
                 this.renderDashboard();
+            }
+
+            async fazerCadastro() {
+                const nome = document.getElementById('cadNome').value.trim();
+                const email = document.getElementById('cadEmail').value.trim();
+                const senha = document.getElementById('cadSenha').value;
+                const confirmar = document.getElementById('cadConfirmar').value;
+                const btn = document.getElementById('btnCadastro');
+                const msgEl = document.getElementById('cadMensagem');
+
+                if (!nome || !email || !senha || !confirmar) {
+                    msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ Preencha todos os campos!</p>';
+                    return;
+                }
+                if (senha.length < 6) {
+                    msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ A senha precisa ter pelo menos 6 caracteres!</p>';
+                    return;
+                }
+                if (senha !== confirmar) {
+                    msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ As senhas não coincidem!</p>';
+                    return;
+                }
+
+                btn.textContent = 'Cadastrando...';
+                btn.disabled = true;
+                msgEl.innerHTML = '';
+
+                const { data, error } = await supabase.auth.signUp({ email, password: senha });
+                if (error) {
+                    msgEl.innerHTML = `<p class="text-red-600 text-sm">❌ ${error.message}</p>`;
+                    btn.textContent = 'Criar Conta';
+                    btn.disabled = false;
+                    return;
+                }
+
+                if (data.user) {
+                    await supabase.from('user_profiles').upsert({
+                        user_id: data.user.id,
+                        nome: nome,
+                        email: email
+                    }, { onConflict: 'user_id' });
+                }
+
+                msgEl.innerHTML = '<p class="text-green-600 text-sm font-semibold">✅ Conta criada! Verifique seu email e depois faça login.</p>';
+                btn.textContent = 'Criar Conta';
+                btn.disabled = false;
+
+                setTimeout(() => this.mostrarAba('login'), 3000);
+            }
+
+            mostrarAba(aba) {
+                document.getElementById('abaLogin').classList.toggle('hidden', aba !== 'login');
+                document.getElementById('abaCadastro').classList.toggle('hidden', aba !== 'cadastro');
+                document.getElementById('tabLogin').classList.toggle('active', aba === 'login');
+                document.getElementById('tabCadastro').classList.toggle('active', aba === 'cadastro');
             }
 
             async logout() {
@@ -333,19 +332,14 @@
             // =============================================
             async carregarDados() {
                 const { data: regras } = await supabase
-                    .from('regras_lembretes')
-                    .select('*')
-                    .eq('sempre_visivel', true)
-                    .order('ordem');
+                    .from('regras_lembretes').select('*')
+                    .eq('sempre_visivel', true).order('ordem');
                 this.regras = regras || [];
 
                 const hoje = new Date().toISOString().split('T')[0];
                 const { data: status } = await supabase
-                    .from('status_plataformas')
-                    .select('*')
-                    .eq('user_id', this.currentUser.id)
-                    .eq('data', hoje)
-                    .single();
+                    .from('status_plataformas').select('*')
+                    .eq('user_id', this.currentUser.id).eq('data', hoje).single();
                 if (status) this.statusPlataformas = status;
 
                 await this.carregarMetricasHistorico();
@@ -354,18 +348,15 @@
 
             async carregarMetricasHistorico() {
                 const { data, error } = await supabase
-                    .from('vw_metricas_diarias')
-                    .select('*')
+                    .from('vw_metricas_diarias').select('*')
                     .eq('user_id', this.currentUser.id)
-                    .gte('data', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+                    .gte('data', new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0])
                     .order('data', { ascending: false });
                 if (!error && data) this.metricasHistorico = data;
             }
 
             async carregarRankingConsultores() {
-                const { data, error } = await supabase
-                    .from('vw_ranking_consultores')
-                    .select('*');
+                const { data, error } = await supabase.from('vw_ranking_consultores').select('*');
                 if (!error && data) this.rankingConsultores = data;
             }
 
@@ -377,28 +368,22 @@
             }
 
             // =============================================
-            // TIMER 5 MINUTOS
+            // TIMER
             // =============================================
             iniciarTimer() {
                 this.pararTimer();
-                this.timerSegundos = 300; // 5 minutos
+                this.timerSegundos = 300;
                 this.timerAtivo = true;
                 this.atualizarDisplayTimer();
                 this.timerInterval = setInterval(() => {
                     this.timerSegundos--;
                     this.atualizarDisplayTimer();
-                    if (this.timerSegundos <= 0) {
-                        this.pararTimer();
-                        this.alertaTimer();
-                    }
+                    if (this.timerSegundos <= 0) { this.pararTimer(); this.alertaTimer(); }
                 }, 1000);
             }
 
             pararTimer() {
-                if (this.timerInterval) {
-                    clearInterval(this.timerInterval);
-                    this.timerInterval = null;
-                }
+                if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
                 this.timerAtivo = false;
             }
 
@@ -410,10 +395,7 @@
                 this.timerInterval = setInterval(() => {
                     this.timerSegundos--;
                     this.atualizarDisplayTimer();
-                    if (this.timerSegundos <= 0) {
-                        this.pararTimer();
-                        this.alertaTimer();
-                    }
+                    if (this.timerSegundos <= 0) { this.pararTimer(); this.alertaTimer(); }
                 }, 1000);
             }
 
@@ -422,34 +404,25 @@
                 if (!el) return;
                 const min = Math.floor(this.timerSegundos / 60);
                 const seg = this.timerSegundos % 60;
-                el.textContent = `${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}`;
-
+                el.textContent = `${String(min).padStart(2,'0')}:${String(seg).padStart(2,'0')}`;
                 const circle = document.getElementById('timerCircle');
                 if (!circle) return;
                 circle.className = 'timer-circle';
-                if (this.timerSegundos > 180) {
-                    circle.classList.add('timer-ok');
-                } else if (this.timerSegundos > 60) {
-                    circle.classList.add('timer-warning');
-                } else {
-                    circle.classList.add('timer-danger');
-                }
+                if (this.timerSegundos > 180) circle.classList.add('timer-ok');
+                else if (this.timerSegundos > 60) circle.classList.add('timer-warning');
+                else circle.classList.add('timer-danger');
             }
 
             alertaTimer() {
                 const el = document.getElementById('timerDisplay');
                 if (el) el.textContent = '00:00';
                 const circle = document.getElementById('timerCircle');
-                if (circle) {
-                    circle.className = 'timer-circle timer-danger';
-                    circle.innerHTML = '⚠️';
-                }
-                // Vibração se disponível
-                if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+                if (circle) { circle.className = 'timer-circle timer-danger'; circle.innerHTML = '⚠️'; }
+                if (navigator.vibrate) navigator.vibrate([300,100,300]);
             }
 
             // =============================================
-            // CONTADOR RÁPIDO
+            // CONTADOR
             // =============================================
             incrementarContador() {
                 const tarefa = this.tarefas[this.tarefaAtualIndex];
@@ -484,29 +457,18 @@
             // =============================================
             async iniciarRotina(periodo) {
                 this.periodo = periodo;
-
                 const { data: templates } = await supabase
-                    .from('rotina_templates')
-                    .select('*')
-                    .eq('periodo', periodo)
-                    .order('ordem');
+                    .from('rotina_templates').select('*')
+                    .eq('periodo', periodo).order('ordem');
 
                 if (!templates || templates.length === 0) {
-                    alert('❌ Nenhuma tarefa encontrada para este período!');
-                    return;
+                    alert('❌ Nenhuma tarefa encontrada para este período!'); return;
                 }
-
-                // Filtrar tarefas pelo dia da semana
                 const tarefasFiltradas = filtrarTarefasPorDia(templates);
-
                 const hoje = new Date().toISOString().split('T')[0];
                 const { data: progressoSalvo } = await supabase
-                    .from('progresso_diario')
-                    .select('*')
-                    .eq('user_id', this.currentUser.id)
-                    .eq('data', hoje)
-                    .eq('periodo', periodo)
-                    .single();
+                    .from('progresso_diario').select('*')
+                    .eq('user_id', this.currentUser.id).eq('data', hoje).eq('periodo', periodo).single();
 
                 if (progressoSalvo && (progressoSalvo.status === 'em_andamento' || progressoSalvo.status === 'pausado')) {
                     const continuar = confirm('Você tem uma rotina em andamento! Deseja continuar de onde parou?');
@@ -514,37 +476,22 @@
                         this.tarefas = progressoSalvo.progresso.tarefas;
                         this.tarefaAtualIndex = progressoSalvo.tarefa_atual_index;
                         this.metricas = progressoSalvo.metricas;
-                        this.renderTarefaAtual();
-                        return;
+                        this.renderTarefaAtual(); return;
                     }
                 }
 
                 this.tarefas = tarefasFiltradas.map((t, index) => ({
-                    ...t,
-                    index,
-                    status: 'pendente',
-                    motivo_nao_concluida: null,
-                    horario_conclusao: null,
-                    contador_valor: 0
+                    ...t, index, status:'pendente',
+                    motivo_nao_concluida:null, horario_conclusao:null, contador_valor:0
                 }));
                 this.tarefaAtualIndex = 0;
-                this.metricas = {
-                    total_tarefas: this.tarefas.length,
-                    concluidas: 0,
-                    nao_deu_tempo: 0,
-                    leads_atendidos: 0
-                };
+                this.metricas = { total_tarefas:this.tarefas.length, concluidas:0, nao_deu_tempo:0, leads_atendidos:0 };
 
                 await supabase.from('progresso_diario').upsert({
-                    user_id: this.currentUser.id,
-                    data: hoje,
-                    periodo,
-                    tarefa_atual_index: 0,
-                    progresso: { tarefas: this.tarefas },
-                    metricas: this.metricas,
-                    status: 'em_andamento',
-                    iniciado_em: new Date().toISOString()
-                }, { onConflict: 'user_id,data,periodo' });
+                    user_id: this.currentUser.id, data: hoje, periodo,
+                    tarefa_atual_index: 0, progresso: { tarefas: this.tarefas },
+                    metricas: this.metricas, status:'em_andamento', iniciado_em: new Date().toISOString()
+                }, { onConflict:'user_id,data,periodo' });
 
                 this.renderTarefaAtual();
             }
@@ -588,45 +535,30 @@
             async salvarProgresso() {
                 const hoje = new Date().toISOString().split('T')[0];
                 await supabase.from('progresso_diario').upsert({
-                    user_id: this.currentUser.id,
-                    data: hoje,
-                    periodo: this.periodo,
+                    user_id: this.currentUser.id, data: hoje, periodo: this.periodo,
                     tarefa_atual_index: this.tarefaAtualIndex,
                     progresso: { tarefas: this.tarefas },
-                    metricas: this.metricas,
-                    status: 'em_andamento'
-                }, { onConflict: 'user_id,data,periodo' });
+                    metricas: this.metricas, status:'em_andamento'
+                }, { onConflict:'user_id,data,periodo' });
             }
 
             async finalizarRotina() {
                 const hoje = new Date().toISOString().split('T')[0];
                 this.pararTimer();
                 await supabase.from('progresso_diario').update({
-                    status: 'finalizado',
-                    finalizado_em: new Date().toISOString(),
-                    metricas: this.metricas
-                })
-                .eq('user_id', this.currentUser.id)
-                .eq('data', hoje)
-                .eq('periodo', this.periodo);
+                    status:'finalizado', finalizado_em: new Date().toISOString(), metricas: this.metricas
+                }).eq('user_id', this.currentUser.id).eq('data', hoje).eq('periodo', this.periodo);
                 this.renderResumo();
             }
 
-            abrirModalPausa() {
-                document.getElementById('modalPausa').classList.add('active');
-            }
-
-            fecharModalPausa() {
-                document.getElementById('modalPausa').classList.remove('active');
-            }
+            abrirModalPausa() { document.getElementById('modalPausa').classList.add('active'); }
+            fecharModalPausa() { document.getElementById('modalPausa').classList.remove('active'); }
 
             async confirmarPausa() {
                 const hoje = new Date().toISOString().split('T')[0];
                 this.pararTimer();
-                await supabase.from('progresso_diario').update({ status: 'pausado' })
-                    .eq('user_id', this.currentUser.id)
-                    .eq('data', hoje)
-                    .eq('periodo', this.periodo);
+                await supabase.from('progresso_diario').update({ status:'pausado' })
+                    .eq('user_id', this.currentUser.id).eq('data', hoje).eq('periodo', this.periodo);
                 this.fecharModalPausa();
                 this.renderDashboard();
             }
@@ -635,10 +567,7 @@
                 this.renderModalNaoDeuTempo();
                 document.getElementById('modalNaoDeuTempo').classList.add('active');
             }
-
-            fecharModalNaoDeuTempo() {
-                document.getElementById('modalNaoDeuTempo').classList.remove('active');
-            }
+            fecharModalNaoDeuTempo() { document.getElementById('modalNaoDeuTempo').classList.remove('active'); }
 
             renderModalNaoDeuTempo() {
                 const conteudo = document.getElementById('conteudoModalNaoDeuTempo');
@@ -646,22 +575,16 @@
                     <div class="space-y-4">
                         <p class="text-gray-700 font-semibold">Selecione o motivo:</p>
                         <div class="space-y-2">
-                            <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                                <input type="radio" name="motivo" value="Muitos atendimentos" class="w-5 h-5">
-                                <span>😰 Muitos atendimentos</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                                <input type="radio" name="motivo" value="Problema técnico" class="w-5 h-5">
-                                <span>🔧 Problema técnico</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                                <input type="radio" name="motivo" value="Reunião não prevista" class="w-5 h-5">
-                                <span>📅 Reunião não prevista</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                                <input type="radio" name="motivo" value="Falta de tempo" class="w-5 h-5">
-                                <span>⏰ Falta de tempo</span>
-                            </label>
+                            ${[
+                                ['Muitos atendimentos','😰'],
+                                ['Problema técnico','🔧'],
+                                ['Reunião não prevista','📅'],
+                                ['Falta de tempo','⏰']
+                            ].map(([val, ico]) => `
+                                <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                                    <input type="radio" name="motivo" value="${val}" class="w-5 h-5">
+                                    <span>${ico} ${val}</span>
+                                </label>`).join('')}
                             <label class="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
                                 <input type="radio" name="motivo" value="outro" class="w-5 h-5">
                                 <span>✏️ Outro (especificar)</span>
@@ -677,10 +600,9 @@
                             <button onclick="app.confirmarNaoDeuTempo()" class="flex-1 btn-danger">Confirmar e Avançar</button>
                             <button onclick="app.fecharModalNaoDeuTempo()" class="flex-1 btn-secondary">Cancelar</button>
                         </div>
-                    </div>
-                `;
-                document.querySelectorAll('input[name="motivo"]').forEach(radio => {
-                    radio.addEventListener('change', (e) => {
+                    </div>`;
+                document.querySelectorAll('input[name="motivo"]').forEach(r => {
+                    r.addEventListener('change', e => {
                         document.getElementById('outroMotivoContainer').style.display =
                             e.target.value === 'outro' ? 'block' : 'none';
                     });
@@ -688,9 +610,9 @@
             }
 
             async confirmarNaoDeuTempo() {
-                const motivoSelecionado = document.querySelector('input[name="motivo"]:checked');
-                if (!motivoSelecionado) { alert('❌ Selecione um motivo!'); return; }
-                let motivo = motivoSelecionado.value;
+                const motivoSel = document.querySelector('input[name="motivo"]:checked');
+                if (!motivoSel) { alert('❌ Selecione um motivo!'); return; }
+                let motivo = motivoSel.value;
                 if (motivo === 'outro') {
                     const txt = document.getElementById('outroMotivoTexto').value.trim();
                     if (!txt) { alert('❌ Digite o motivo específico!'); return; }
@@ -721,9 +643,7 @@
             calcularProgresso() {
                 const total = this.tarefas.length;
                 if (total === 0) return 0;
-                const realizadas = this.tarefas.filter(t =>
-                    t.status === 'concluida' || t.status === 'nao_deu_tempo'
-                ).length;
+                const realizadas = this.tarefas.filter(t => t.status === 'concluida' || t.status === 'nao_deu_tempo').length;
                 return Math.round((realizadas / total) * 100);
             }
 
@@ -747,17 +667,47 @@
                                     </div>
                                 </div>
                             </div>
-                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Rotina do Consultor v3.1</h1>
+                            <h1 class="text-2xl font-bold text-center text-cm-escuro mb-2">Rotina do Consultor v3.2</h1>
                             <p class="text-gray-500 text-center mb-6 text-sm">🎯 Uma tarefa por vez · ⏱️ Timer 5min · 📊 Métricas</p>
-                            <input type="email" id="loginEmail" placeholder="Email"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
-                            <input type="password" id="loginSenha" placeholder="Senha"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-6 focus:outline-none focus:border-cm-turquesa"
-                                onkeypress="if(event.key==='Enter') app.fazerLogin()" />
-                            <button id="btnLogin" onclick="app.fazerLogin()" class="w-full btn-primary py-3">Entrar</button>
+
+                            <!-- Tabs -->
+                            <div class="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
+                                <button id="tabLogin" onclick="app.mostrarAba('login')"
+                                    class="tab-btn active flex-1 py-2 rounded-md font-semibold text-sm">
+                                    🔑 Entrar
+                                </button>
+                                <button id="tabCadastro" onclick="app.mostrarAba('cadastro')"
+                                    class="tab-btn flex-1 py-2 rounded-md font-semibold text-sm text-gray-600">
+                                    ✨ Criar Conta
+                                </button>
+                            </div>
+
+                            <!-- Aba Login -->
+                            <div id="abaLogin">
+                                <input type="email" id="loginEmail" placeholder="Email"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                                <input type="password" id="loginSenha" placeholder="Senha"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-6 focus:outline-none focus:border-cm-turquesa"
+                                    onkeypress="if(event.key==='Enter') app.fazerLogin()" />
+                                <button id="btnLogin" onclick="app.fazerLogin()" class="w-full btn-primary py-3">Entrar</button>
+                            </div>
+
+                            <!-- Aba Cadastro -->
+                            <div id="abaCadastro" class="hidden">
+                                <input type="text" id="cadNome" placeholder="Seu nome completo"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                                <input type="email" id="cadEmail" placeholder="Email"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                                <input type="password" id="cadSenha" placeholder="Senha (mínimo 6 caracteres)"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa" />
+                                <input type="password" id="cadConfirmar" placeholder="Confirmar senha"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-cm-turquesa"
+                                    onkeypress="if(event.key==='Enter') app.fazerCadastro()" />
+                                <div id="cadMensagem" class="mb-4"></div>
+                                <button id="btnCadastro" onclick="app.fazerCadastro()" class="w-full btn-primary py-3">Criar Conta</button>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
 
             renderDashboard() {
@@ -773,7 +723,7 @@
                         <div class="bg-cm-escuro text-white shadow-lg">
                             <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
                                 <div>
-                                    <h1 class="text-xl font-bold">C&M Rotina v3.1</h1>
+                                    <h1 class="text-xl font-bold">C&M Rotina v3.2</h1>
                                     <p class="text-xs text-gray-300">Olá, ${nomeUsuario}! · ${nomeDia}</p>
                                 </div>
                                 <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
@@ -792,19 +742,21 @@
                                     <button onclick="app.renderDashboardAdminGeral()" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-gray-200 text-gray-700 hover:bg-gray-300">
                                         👥 Equipe
                                     </button>
+                                    <button onclick="app.renderPainelUsuarios()" class="px-4 py-2 rounded-lg whitespace-nowrap font-semibold bg-purple-100 text-purple-700 hover:bg-purple-200">
+                                        👑 Usuários
+                                    </button>
                                 ` : ''}
                             </div>
                         </div>
 
                         <div class="max-w-4xl mx-auto px-4 py-8">
-
                             ${diaEspecial ? `
                                 <div class="aviso-dia-especial mb-6">
                                     <div class="flex items-start gap-3">
                                         <span class="text-2xl">📚</span>
                                         <div>
                                             <p class="font-bold text-yellow-800 text-lg">Hoje é ${nomeDia} — Dia de Treinamento</p>
-                                            <p class="text-yellow-700 mt-1">As tarefas de <strong>prospecção</strong> e <strong>remarketing</strong> estão desativadas hoje. Foque nos atendimentos ativos, follow-up e atualização do kanban.</p>
+                                            <p class="text-yellow-700 mt-1">As tarefas de <strong>prospecção</strong> e <strong>remarketing</strong> estão desativadas hoje.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -817,7 +769,7 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                                     <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
                                         <p class="font-semibold text-blue-800">📋 Tarefas do Período</p>
-                                        <p class="text-2xl font-bold text-blue-900">${periodo === 'manha' ? (diaEspecial ? '11' : '11') : (diaEspecial ? '14' : '16')}</p>
+                                        <p class="text-2xl font-bold text-blue-900">${periodo === 'manha' ? '11' : (diaEspecial ? '14' : '16')}</p>
                                         ${diaEspecial ? '<p class="text-xs text-blue-600">2 tarefas ocultas hoje</p>' : ''}
                                     </div>
                                     <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded">
@@ -853,16 +805,200 @@
                         </div>
 
                         ${this.renderSidebarRegras()}
-                    </div>
-                `;
+                    </div>`;
             }
 
+            // =============================================
+            // PAINEL DE USUÁRIOS (ADMIN)
+            // =============================================
+            async renderPainelUsuarios() {
+                const { data: usuarios, error } = await supabase
+                    .from('user_profiles').select('*').order('criado_em', { ascending: false });
+
+                document.getElementById('app').innerHTML = `
+                    <div class="min-h-screen bg-gray-50">
+                        <div class="bg-cm-escuro text-white shadow-lg">
+                            <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+                                <h1 class="text-xl font-bold">👑 Gerenciar Usuários</h1>
+                                <div class="flex gap-2">
+                                    <button onclick="app.voltarDashboard()" class="bg-cm-turquesa hover:opacity-90 px-4 py-2 rounded-lg text-sm">🏠 Voltar</button>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="max-w-5xl mx-auto px-4 py-8">
+                            <div class="bg-white rounded-lg shadow-lg p-6">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h2 class="text-lg font-bold text-gray-800">Consultores Cadastrados</h2>
+                                    <span class="bg-cm-turquesa text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                        ${(usuarios || []).length} usuários
+                                    </span>
+                                </div>
+
+                                ${!usuarios || usuarios.length === 0 ? `
+                                    <div class="text-center py-12">
+                                        <div class="text-6xl mb-4">👤</div>
+                                        <p class="text-gray-500">Nenhum usuário cadastrado ainda.</p>
+                                    </div>
+                                ` : `
+                                    <div class="space-y-4">
+                                        ${usuarios.map(u => `
+                                            <div class="border border-gray-200 rounded-lg p-5 hover:bg-gray-50 transition">
+                                                <div class="flex flex-col md:flex-row md:items-center gap-4">
+                                                    <div class="flex-1">
+                                                        <div class="flex items-center gap-3 mb-1">
+                                                            <div class="w-10 h-10 bg-cm-turquesa rounded-full flex items-center justify-center text-white font-bold text-lg">
+                                                                ${u.nome.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <p class="font-bold text-gray-800">${u.nome}</p>
+                                                                <p class="text-sm text-gray-500">${u.email}</p>
+                                                            </div>
+                                                        </div>
+                                                        <p class="text-xs text-gray-400 mt-2 ml-13">
+                                                            Cadastrado em ${new Date(u.criado_em).toLocaleDateString('pt-BR')}
+                                                        </p>
+                                                    </div>
+                                                    <div class="flex gap-2 flex-wrap">
+                                                        <button onclick="app.abrirModalAlterarSenha('${u.user_id}','${u.nome}')"
+                                                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                                                            🔑 Alterar Senha
+                                                        </button>
+                                                        <button onclick="app.confirmarExcluirUsuario('${u.user_id}','${u.nome}')"
+                                                            class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                                                            🗑️ Excluir
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>`).join('')}
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            abrirModalAlterarSenha(userId, nome) {
+                const modal = document.createElement('div');
+                modal.id = 'modalAlterarSenha';
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+                        <h2 class="text-xl font-bold text-gray-800 mb-1">🔑 Alterar Senha</h2>
+                        <p class="text-gray-500 text-sm mb-6">Consultor: <strong>${nome}</strong></p>
+                        <input type="password" id="novaSenhaInput" placeholder="Nova senha (mínimo 6 caracteres)"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-blue-500"
+                            onkeypress="if(event.key==='Enter') app.executarAlterarSenha('${userId}')" />
+                        <input type="password" id="confirmarSenhaInput" placeholder="Confirmar nova senha"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg mb-4 focus:outline-none focus:border-blue-500"
+                            onkeypress="if(event.key==='Enter') app.executarAlterarSenha('${userId}')" />
+                        <div id="msgAlterarSenha" class="mb-4"></div>
+                        <div class="flex gap-3">
+                            <button onclick="document.getElementById('modalAlterarSenha').remove()"
+                                class="flex-1 btn-secondary">Cancelar</button>
+                            <button onclick="app.executarAlterarSenha('${userId}')"
+                                id="btnAlterarSenha" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition">
+                                Salvar Senha
+                            </button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+                setTimeout(() => document.getElementById('novaSenhaInput')?.focus(), 100);
+            }
+
+            async executarAlterarSenha(userId) {
+                const novaSenha = document.getElementById('novaSenhaInput').value;
+                const confirmar = document.getElementById('confirmarSenhaInput').value;
+                const msgEl = document.getElementById('msgAlterarSenha');
+                const btn = document.getElementById('btnAlterarSenha');
+
+                if (!novaSenha || !confirmar) {
+                    msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ Preencha os dois campos!</p>'; return;
+                }
+                if (novaSenha.length < 6) {
+                    msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ A senha precisa ter pelo menos 6 caracteres!</p>'; return;
+                }
+                if (novaSenha !== confirmar) {
+                    msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ As senhas não coincidem!</p>'; return;
+                }
+
+                btn.textContent = 'Salvando...';
+                btn.disabled = true;
+                msgEl.innerHTML = '';
+
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const response = await fetch(EDGE_FUNCTION_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify({ target_user_id: userId, nova_senha: novaSenha })
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok || result.error) {
+                        msgEl.innerHTML = `<p class="text-red-600 text-sm">❌ ${result.error || 'Erro ao alterar senha'}</p>`;
+                        btn.textContent = 'Salvar Senha';
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    msgEl.innerHTML = '<p class="text-green-600 text-sm font-semibold">✅ Senha alterada com sucesso!</p>';
+                    btn.textContent = 'Salvar Senha';
+                    btn.disabled = false;
+                    setTimeout(() => document.getElementById('modalAlterarSenha')?.remove(), 1500);
+                } catch (err) {
+                    msgEl.innerHTML = `<p class="text-red-600 text-sm">❌ Erro de conexão: ${err.message}</p>`;
+                    btn.textContent = 'Salvar Senha';
+                    btn.disabled = false;
+                }
+            }
+
+            confirmarExcluirUsuario(userId, nome) {
+                const modal = document.createElement('div');
+                modal.id = 'modalExcluir';
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+                modal.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center">
+                        <div class="text-5xl mb-4">⚠️</div>
+                        <h2 class="text-xl font-bold text-gray-800 mb-2">Excluir Usuário?</h2>
+                        <p class="text-gray-600 mb-2">Você está prestes a excluir:</p>
+                        <p class="font-bold text-red-600 text-lg mb-6">${nome}</p>
+                        <p class="text-sm text-gray-500 mb-6">Esta ação não pode ser desfeita. O histórico de métricas será mantido.</p>
+                        <div class="flex gap-3">
+                            <button onclick="document.getElementById('modalExcluir').remove()"
+                                class="flex-1 btn-secondary">Cancelar</button>
+                            <button onclick="app.executarExcluirUsuario('${userId}')"
+                                class="flex-1 btn-danger">Excluir</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+            }
+
+            async executarExcluirUsuario(userId) {
+                document.getElementById('modalExcluir')?.remove();
+                const { error } = await supabase
+                    .from('user_profiles').delete().eq('user_id', userId);
+                if (error) {
+                    alert('❌ Erro ao excluir: ' + error.message); return;
+                }
+                alert('✅ Usuário excluído com sucesso!');
+                this.renderPainelUsuarios();
+            }
+
+            // =============================================
+            // TAREFA ATUAL
+            // =============================================
             renderTarefaAtual() {
                 const tarefa = this.tarefas[this.tarefaAtualIndex];
                 const progresso = this.calcularProgresso();
                 const periodoTexto = this.periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde';
                 const estaConcluida = tarefa.status === 'concluida';
                 const naoDeuTempo = tarefa.status === 'nao_deu_tempo';
+                const deveIniciarTimer = tarefa.tem_timer && !estaConcluida && !naoDeuTempo;
 
                 let corHeader = 'bg-blue-500';
                 if (estaConcluida) corHeader = 'bg-green-500';
@@ -875,12 +1011,8 @@
                 else if (tarefa.tipo === 'verificacao') badgeHtml = '<span class="badge-verificacao">✅ VERIFICAÇÃO</span>';
                 else badgeHtml = '<span class="badge-padrao">📋 TAREFA</span>';
 
-                // Iniciar timer automaticamente em tarefas prioritárias com timer
-                const deveIniciarTimer = tarefa.tem_timer && !estaConcluida && !naoDeuTempo;
-
                 document.getElementById('app').innerHTML = `
                     <div class="min-h-screen bg-gray-50">
-                        <!-- Header -->
                         <div class="bg-cm-escuro text-white shadow-lg">
                             <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
                                 <div>
@@ -894,7 +1026,6 @@
                             </div>
                         </div>
 
-                        <!-- Barra de Progresso -->
                         <div class="bg-white shadow">
                             <div class="max-w-6xl mx-auto px-4 py-3">
                                 <div class="flex justify-between items-center mb-1">
@@ -902,20 +1033,73 @@
                                     <span class="text-sm font-bold text-cm-turquesa">${progresso}%</span>
                                 </div>
                                 <div class="w-full bg-gray-200 rounded-full h-3">
-                                    <div class="progress-bar bg-cm-verde h-3 rounded-full" style="width: ${progresso}%"></div>
+                                    <div class="progress-bar bg-cm-verde h-3 rounded-full" style="width:${progresso}%"></div>
                                 </div>
                                 <div class="flex justify-between text-xs text-gray-500 mt-1">
                                     <span>✅ <span id="metricaConcluidas">${this.metricas.concluidas}</span> concluídas</span>
                                     <span>❌ ${this.metricas.nao_deu_tempo} não deram tempo</span>
-                                    <span>👤 <span id="metricaLeads">${this.metricas.leads_atendidos}</span> leads atendidos</span>
+                                    <span>👤 <span id="metricaLeads">${this.metricas.leads_atendidos}</span> leads</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Conteúdo -->
-                        <div class="max-w-6xl mx-auto px-4 py-6 pr-4 md:pr-[320px]">
+                        <div class="max-w-6xl mx-auto px-4 py-6 md:pr-[320px]">
+                            <div class="bg-white rounded-lg shadow p-4 mb-6">
+                                <h3 class="text-sm font-bold text-gray-700 mb-3">Mapa de Tarefas:</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    ${this.tarefas.map((t, index) => {
+                                        let cor = 'bg-gray-300            renderTarefaAtual() {
+                const tarefa = this.tarefas[this.tarefaAtualIndex];
+                const progresso = this.calcularProgresso();
+                const periodoTexto = this.periodo === 'manha' ? '🌅 Manhã' : '🌆 Tarde';
+                const estaConcluida = tarefa.status === 'concluida';
+                const naoDeuTempo = tarefa.status === 'nao_deu_tempo';
+                const deveIniciarTimer = tarefa.tem_timer && !estaConcluida && !naoDeuTempo;
 
-                            <!-- Mapa de Tarefas -->
+                let corHeader = 'bg-blue-500';
+                if (estaConcluida) corHeader = 'bg-green-500';
+                else if (naoDeuTempo) corHeader = 'bg-orange-500';
+                else if (tarefa.tipo === 'prioritaria') corHeader = 'bg-red-600';
+                else if (tarefa.tipo === 'verificacao') corHeader = 'bg-green-600';
+
+                let badgeHtml = '';
+                if (tarefa.tipo === 'prioritaria') badgeHtml = '<span class="badge-prioritaria">🔴 PRIORIDADE</span>';
+                else if (tarefa.tipo === 'verificacao') badgeHtml = '<span class="badge-verificacao">✅ VERIFICAÇÃO</span>';
+                else badgeHtml = '<span class="badge-padrao">📋 TAREFA</span>';
+
+                document.getElementById('app').innerHTML = `
+                    <div class="min-h-screen bg-gray-50">
+                        <div class="bg-cm-escuro text-white shadow-lg">
+                            <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                                <div>
+                                    <h1 class="text-xl font-bold">${periodoTexto} · ${getNomeDia()}</h1>
+                                    <p class="text-xs text-gray-300">Tarefa ${this.tarefaAtualIndex + 1} de ${this.tarefas.length}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="app.abrirModalPausa()" class="bg-yellow-500 hover:bg-yellow-600 px-3 py-2 rounded-lg text-sm">⏸️ Pausar</button>
+                                    <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-3 py-2 rounded-lg text-sm">🚪 Sair</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white shadow">
+                            <div class="max-w-6xl mx-auto px-4 py-3">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-sm font-semibold text-gray-700">Progresso Geral</span>
+                                    <span class="text-sm font-bold text-cm-turquesa">${progresso}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                    <div class="progress-bar bg-cm-verde h-3 rounded-full" style="width:${progresso}%"></div>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                    <span>✅ <span id="metricaConcluidas">${this.metricas.concluidas}</span> concluídas</span>
+                                    <span>❌ ${this.metricas.nao_deu_tempo} não deram tempo</span>
+                                    <span>👤 <span id="metricaLeads">${this.metricas.leads_atendidos}</span> leads</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="max-w-6xl mx-auto px-4 py-6 md:pr-[320px]">
                             <div class="bg-white rounded-lg shadow p-4 mb-6">
                                 <h3 class="text-sm font-bold text-gray-700 mb-3">Mapa de Tarefas:</h3>
                                 <div class="flex flex-wrap gap-2">
@@ -942,10 +1126,7 @@
                                 </div>
                             </div>
 
-                            <!-- Card da Tarefa -->
                             <div class="tarefa-card bg-white rounded-lg shadow-2xl overflow-hidden slide-in">
-
-                                <!-- Header da Tarefa -->
                                 <div class="${corHeader} text-white p-6">
                                     <div class="flex items-start justify-between gap-4">
                                         <div class="flex items-center gap-3 flex-1">
@@ -968,7 +1149,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Corpo da Tarefa -->
                                 <div class="p-8">
                                     <h3 class="text-xl font-bold text-gray-800 mb-6">${tarefa.texto}</h3>
 
@@ -998,15 +1178,12 @@
                                         </div>
                                     ` : ''}
 
-                                    <!-- Botões de Ação -->
                                     <div class="mt-6">
                                         ${estaConcluida ? `
                                             <div class="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
                                                 <div class="text-5xl mb-3">✅</div>
                                                 <h3 class="text-xl font-bold text-green-700 mb-1">Tarefa Concluída!</h3>
-                                                <p class="text-green-600 text-sm">
-                                                    Finalizada às ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}
-                                                </p>
+                                                <p class="text-green-600 text-sm">Finalizada às ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
                                                 <p class="text-xs text-gray-400 mt-3">Esta tarefa está bloqueada e não pode ser alterada</p>
                                             </div>
                                         ` : naoDeuTempo ? `
@@ -1015,12 +1192,12 @@
                                                     <div class="text-4xl mb-2">⚠️</div>
                                                     <h3 class="text-lg font-bold text-orange-700 mb-1">Esta tarefa não foi concluída</h3>
                                                     <p class="text-orange-600 text-sm"><strong>Motivo:</strong> ${tarefa.motivo_nao_concluida}</p>
-                                                    <p class="text-xs text-gray-500 mt-1">Marcada às ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</p>
+                                                    <p class="text-xs text-gray-500 mt-1">Marcada às ${new Date(tarefa.horario_conclusao).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
                                                 </div>
                                                 <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded mb-4">
                                                     <p class="text-sm text-yellow-800">💡 <strong>Sobrou tempo?</strong> Você pode refazer esta tarefa!</p>
                                                 </div>
-                                                <button onclick="app.refazerTarefa()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition flex items-center justify-center gap-2">
+                                                <button onclick="app.refazerTarefa()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition">
                                                     🔄 REFAZER AGORA
                                                 </button>
                                             </div>
@@ -1036,7 +1213,6 @@
                                         `}
                                     </div>
 
-                                    <!-- Navegação -->
                                     <div class="flex justify-between mt-6 pt-6 border-t">
                                         <button onclick="app.tarefaAnterior()"
                                             ${this.tarefaAtualIndex === 0 ? 'disabled' : ''}
@@ -1055,7 +1231,6 @@
                                 </div>
                             </div>
 
-                            <!-- Métricas Rápidas -->
                             <div class="grid grid-cols-4 gap-3 mt-6">
                                 <div class="bg-white p-3 rounded-lg shadow text-center">
                                     <p class="text-2xl font-bold text-cm-turquesa">${this.metricas.concluidas}</p>
@@ -1077,13 +1252,9 @@
                         </div>
 
                         ${this.renderSidebarRegras()}
-                    </div>
-                `;
+                    </div>`;
 
-                // Iniciar timer automaticamente se necessário
-                if (deveIniciarTimer) {
-                    setTimeout(() => this.iniciarTimer(), 300);
-                }
+                if (deveIniciarTimer) setTimeout(() => this.iniciarTimer(), 300);
             }
 
             renderSidebarRegras() {
@@ -1094,19 +1265,15 @@
                             ${this.regras.filter(r => r.tipo === 'regra').map(r => `
                                 <div class="regra-item bg-gray-50 p-3 rounded-lg">
                                     <p class="text-xs font-semibold text-gray-800">${r.icone} ${r.texto}</p>
-                                </div>
-                            `).join('')}
+                                </div>`).join('')}
                         </div>
-
                         <h3 class="text-base font-bold text-cm-escuro mb-3">💡 LEMBRETES</h3>
                         <div class="space-y-2 mb-6">
                             ${this.regras.filter(r => r.tipo === 'lembrete').map(r => `
                                 <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                                     <p class="text-xs text-gray-700">${r.icone} ${r.texto}</p>
-                                </div>
-                            `).join('')}
+                                </div>`).join('')}
                         </div>
-
                         <h3 class="text-base font-bold text-cm-escuro mb-3">📲 PLATAFORMAS</h3>
                         <div class="space-y-2">
                             <div class="flex justify-between items-center p-2 rounded ${this.statusPlataformas.whatsapp_ok ? 'bg-green-50' : 'bg-red-50'}">
@@ -1122,15 +1289,13 @@
                                 <span>✅</span>
                             </div>
                         </div>
-
                         ${isDiaEspecial() ? `
                             <div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                                 <p class="text-xs font-bold text-yellow-800">📚 ${getNomeDia()}</p>
                                 <p class="text-xs text-yellow-700 mt-1">Prospecção e remarketing desativados hoje.</p>
                             </div>
                         ` : ''}
-                    </div>
-                `;
+                    </div>`;
             }
 
             renderResumo() {
@@ -1146,11 +1311,9 @@
                                 <button onclick="app.renderDashboard()" class="bg-cm-turquesa hover:opacity-90 px-4 py-2 rounded-lg text-sm">🏠 Início</button>
                             </div>
                         </div>
-
                         <div class="max-w-4xl mx-auto px-4 py-8">
                             <div class="bg-white rounded-lg shadow-lg p-8 mb-6">
                                 <h2 class="text-3xl font-bold text-center text-cm-escuro mb-8">🎉 Rotina Finalizada!</h2>
-
                                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                     <div class="bg-green-50 p-6 rounded-lg text-center">
                                         <p class="text-4xl font-bold text-green-600">${this.metricas.concluidas}</p>
@@ -1169,7 +1332,6 @@
                                         <p class="text-sm text-gray-600">Completude</p>
                                     </div>
                                 </div>
-
                                 ${tarefasProblema.length > 0 ? `
                                     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-6">
                                         <h3 class="font-bold text-yellow-800 mb-4">⚠️ Tarefas que Não Deram Tempo:</h3>
@@ -1178,8 +1340,7 @@
                                                 <div class="bg-white p-4 rounded-lg">
                                                     <p class="font-semibold text-gray-800">${t.texto}</p>
                                                     <p class="text-sm text-gray-600 mt-1"><strong>Motivo:</strong> ${t.motivo_nao_concluida}</p>
-                                                </div>
-                                            `).join('')}
+                                                </div>`).join('')}
                                         </div>
                                     </div>
                                 ` : `
@@ -1189,14 +1350,12 @@
                                         <p class="text-green-600 text-sm mt-1">Excelente desempenho hoje!</p>
                                     </div>
                                 `}
-
                                 <button onclick="app.renderDashboard()" class="w-full btn-primary py-4 text-lg">
                                     ✅ Finalizar e Voltar ao Início
                                 </button>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
 
             // =============================================
@@ -1209,8 +1368,7 @@
                 const nomeUsuario = this.currentUser.user_metadata?.nome || this.currentUser.email.split('@')[0];
                 const ultimos7Dias = this.metricasHistorico;
                 const mediaGeral = ultimos7Dias.length > 0
-                    ? (ultimos7Dias.reduce((sum, m) => sum + parseFloat(m.taxa_conclusao), 0) / ultimos7Dias.length).toFixed(1)
-                    : 0;
+                    ? (ultimos7Dias.reduce((sum, m) => sum + parseFloat(m.taxa_conclusao), 0) / ultimos7Dias.length).toFixed(1) : 0;
                 const totalLeads = ultimos7Dias.reduce((sum, m) => sum + parseInt(m.leads_atendidos || 0), 0);
                 const totalConcluidas = ultimos7Dias.reduce((sum, m) => sum + parseInt(m.concluidas), 0);
                 const totalNaoDeuTempo = ultimos7Dias.reduce((sum, m) => sum + parseInt(m.nao_deu_tempo), 0);
@@ -1235,7 +1393,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="max-w-6xl mx-auto px-4 py-8">
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-cm-turquesa">
@@ -1262,7 +1419,7 @@
                                     ${Object.keys(dadosPorDia).sort().reverse().map(data => {
                                         const d = new Date(data + 'T00:00:00');
                                         const diaSemana = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()];
-                                        const dataFormatada = d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+                                        const dataFormatada = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
                                         const manha = dadosPorDia[data].manha;
                                         const tarde = dadosPorDia[data].tarde;
                                         const media = ((manha || 0) + (tarde || 0)) / (manha && tarde ? 2 : 1);
@@ -1298,8 +1455,7 @@
                                 <div id="tarefasProblema">Carregando...</div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 this.carregarTarefasProblemaIndividual();
             }
 
@@ -1313,8 +1469,7 @@
                         <div class="text-center py-8">
                             <div class="text-6xl mb-4">🎉</div>
                             <p class="text-gray-600 font-semibold">Nenhuma tarefa com problemas recorrentes!</p>
-                        </div>`;
-                    return;
+                        </div>`; return;
                 }
                 container.innerHTML = data.map((t, index) => `
                     <div class="flex items-start gap-4 p-4 border-l-4 border-orange-500 bg-orange-50 rounded-lg mb-3">
@@ -1328,13 +1483,12 @@
             }
 
             // =============================================
-            // ADMIN
+            // ADMIN - DASHBOARD EQUIPE
             // =============================================
             async renderDashboardAdminGeral() {
                 await this.carregarRankingConsultores();
                 const mediaEquipe = this.rankingConsultores.length > 0
-                    ? (this.rankingConsultores.reduce((sum, c) => sum + parseFloat(c.media_conclusao), 0) / this.rankingConsultores.length).toFixed(1)
-                    : 0;
+                    ? (this.rankingConsultores.reduce((sum, c) => sum + parseFloat(c.media_conclusao), 0) / this.rankingConsultores.length).toFixed(1) : 0;
 
                 document.getElementById('app').innerHTML = `
                     <div class="min-h-screen bg-gray-50">
@@ -1342,12 +1496,12 @@
                             <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
                                 <h1 class="text-xl font-bold">👥 Dashboard da Equipe</h1>
                                 <div class="flex gap-2">
+                                    <button onclick="app.renderPainelUsuarios()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm">👑 Usuários</button>
                                     <button onclick="app.voltarDashboard()" class="bg-cm-turquesa hover:opacity-90 px-4 py-2 rounded-lg text-sm">🏠 Voltar</button>
                                     <button onclick="app.logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm">🚪 Sair</button>
                                 </div>
                             </div>
                         </div>
-
                         <div class="max-w-6xl mx-auto px-4 py-8">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-cm-turquesa">
@@ -1366,7 +1520,6 @@
                                     <p class="text-xs text-gray-500 mt-2">${this.rankingConsultores[0]?.media_conclusao || 0}% média</p>
                                 </div>
                             </div>
-
                             <div class="bg-white rounded-lg shadow-lg p-6">
                                 <h3 class="text-lg font-bold text-gray-800 mb-4">🏆 Ranking de Consultores</h3>
                                 <div class="space-y-3">
@@ -1391,21 +1544,17 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
 
             async verDetalhesConsultor(userId) {
                 const { data: metricas } = await supabase
-                    .from('vw_metricas_diarias').select('*')
-                    .eq('user_id', userId)
+                    .from('vw_metricas_diarias').select('*').eq('user_id', userId)
                     .gte('data', new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0])
                     .order('data', { ascending: false });
-
                 const { data: tarefasProblema } = await supabase.rpc('get_top_tarefas_problema', {
                     p_user_id: userId, p_limite: 5
                 });
-
                 const c = this.rankingConsultores.find(x => x.user_id === userId);
                 if (!c) return;
 
@@ -1423,7 +1572,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="max-w-6xl mx-auto px-4 py-8">
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                                 <div class="bg-white rounded-lg shadow-lg p-6 border-t-4 border-cm-turquesa">
@@ -1494,8 +1642,7 @@
                                     </div>`}
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
 
             abrirModalAdmin() {
@@ -1518,19 +1665,13 @@
                 document.getElementById('senhaAdmin')?.addEventListener('keypress', e => { if(e.key === 'Enter') this.confirmarAdmin(); });
             }
 
-            fecharModalAdmin() {
-                document.getElementById('modalAdmin')?.remove();
-            }
+            fecharModalAdmin() { document.getElementById('modalAdmin')?.remove(); }
 
             async confirmarAdmin() {
                 const input = document.getElementById('senhaAdmin');
                 if (!input) return;
-                const SENHA = '071727';
-                if (input.value.trim() !== SENHA) {
-                    alert('❌ Senha incorreta!');
-                    input.value = '';
-                    input.focus();
-                    return;
+                if (input.value.trim() !== '071727') {
+                    alert('❌ Senha incorreta!'); input.value = ''; input.focus(); return;
                 }
                 try {
                     await supabase.from('user_roles').upsert(
