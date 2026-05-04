@@ -271,7 +271,9 @@
             body: JSON.stringify({ action: 'cadastrar', nome, email, senha })
         });
 
-        const result = await response.json();
+      const result = await response.json();
+console.log('STATUS:', response.status);
+console.log('RESULTADO:', JSON.stringify(result));
 
         if (!response.ok || result.error) {
             msgEl.innerHTML = `<p class="text-red-600 text-sm">❌ ${result.error}</p>`;
