@@ -265,11 +265,15 @@
     msgEl.innerHTML = '';
 
     try {
-        const response = await fetch(EDGE_FUNCTION_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'cadastrar', nome, email, senha })
-        });
+  const response = await fetch(EDGE_FUNCTION_URL, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabase.supabaseKey}`,
+        'apikey': supabase.supabaseKey
+    },
+    body: JSON.stringify({ action: 'cadastrar', nome, email, senha })
+});
 
       const result = await response.json();
 console.log('STATUS:', response.status);
