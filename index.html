@@ -242,57 +242,55 @@
                 this.renderDashboard();
             }
 
-            async fazerCadastro() {
-                const nome = document.getElementById('cadNome').value.trim();
-                const email = document.getElementById('cadEmail').value.trim();
-                const senha = document.getElementById('cadSenha').value;
-                const confirmar = document.getElementById('cadConfirmar').value;
-                const btn = document.getElementById('btnCadastro');
-                const msgEl = document.getElementById('cadMensagem');
+    async fazerCadastro() {
+    const nome = document.getElementById('cadNome').value.trim();
+    const email = document.getElementById('cadEmail').value.trim();
+    const senha = document.getElementById('cadSenha').value;
+    const confirmar = document.getElementById('cadConfirmar').value;
+    const btn = document.getElementById('btnCadastro');
+    const msgEl = document.getElementById('cadMensagem');
 
-                if (!nome || !email || !senha || !confirmar) {
-                    msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ Preencha todos os campos!</p>'; return;
-                }
-                if (senha.length < 6) {
-                    msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ A senha precisa ter pelo menos 6 caracteres!</p>'; return;
-                }
-                if (senha !== confirmar) {
-                    msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ As senhas não coincidem!</p>'; return;
-                }
+    if (!nome || !email || !senha || !confirmar) {
+        msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ Preencha todos os campos!</p>'; return;
+    }
+    if (senha.length < 6) {
+        msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ A senha precisa ter pelo menos 6 caracteres!</p>'; return;
+    }
+    if (senha !== confirmar) {
+        msgEl.innerHTML = '<p class="text-red-600 text-sm">❌ As senhas não coincidem!</p>'; return;
+    }
 
-                btn.textContent = 'Cadastrando...';
-                btn.disabled = true;
-                msgEl.innerHTML = '';
+    btn.textContent = 'Cadastrando...';
+    btn.disabled = true;
+    msgEl.innerHTML = '';
 
-                const { data, error } = await supabase.auth.signUp({ email, password: senha });
-                if (error) {
-                    msgEl.innerHTML = `<p class="text-red-600 text-sm">❌ ${error.message}</p>`;
-                    btn.textContent = 'Criar Conta';
-                    btn.disabled = false;
-                    return;
-                }
+    try {
+        const response = await fetch(EDGE_FUNCTION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'cadastrar', nome, email, senha })
+        });
 
-                if (data.user) {
-                    const { error: credError } = await supabase.from('user_credentials').upsert({
-                        user_id: data.user.id,
-                        nome: nome,
-                        email: email,
-                        senha_original: senha
-                    }, { onConflict: 'user_id' });
+        const result = await response.json();
 
-                    if (credError) {
-                        msgEl.innerHTML = `<p class="text-red-600 text-sm">❌ Erro ao salvar dados: ${credError.message}</p>`;
-                        btn.textContent = 'Criar Conta';
-                        btn.disabled = false;
-                        return;
-                    }
-                }
+        if (!response.ok || result.error) {
+            msgEl.innerHTML = `<p class="text-red-600 text-sm">❌ ${result.error}</p>`;
+            btn.textContent = 'Criar Conta';
+            btn.disabled = false;
+            return;
+        }
 
-                msgEl.innerHTML = '<p class="text-green-600 text-sm font-semibold">✅ Conta criada! Verifique seu email e depois faça login.</p>';
-                btn.textContent = 'Criar Conta';
-                btn.disabled = false;
-                setTimeout(() => this.mostrarAba('login'), 3000);
-            }
+        msgEl.innerHTML = '<p class="text-green-600 text-sm font-semibold">✅ Conta criada! Faça login agora.</p>';
+        btn.textContent = 'Criar Conta';
+        btn.disabled = false;
+        setTimeout(() => this.mostrarAba('login'), 2000);
+
+    } catch (err) {
+        msgEl.innerHTML = `<p class="text-red-600 text-sm">❌ Erro: ${err.message}</p>`;
+        btn.textContent = 'Criar Conta';
+        btn.disabled = false;
+    }
+}
 
             mostrarAba(aba) {
                 document.getElementById('abaLogin').classList.toggle('hidden', aba !== 'login');
